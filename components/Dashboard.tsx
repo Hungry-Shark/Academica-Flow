@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { default as autoTable } from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { Sidebar } from './Sidebar';
 import { Chat } from './Chat';
