@@ -1,0 +1,5 @@
+{
+  "name": "Academica Flow",
+  "description": "An AI-assisted timetable generator for academic institutions, designed to work with the NEP 2020 framework. It allows for timetable creation, modification via chat, and includes a RAG-based assistant for policy questions.",
+  "requestFramePermissions": []
+}
