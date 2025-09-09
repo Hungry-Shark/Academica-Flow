@@ -1,4 +1,4 @@
-// FIX: Define types for the application
+﻿// FIX: Define types for the application
 export interface TimetableSlot {
   courseName: string;
   facultyName: string;
@@ -17,11 +17,13 @@ export interface ChatMessage {
 }
 
 export interface UserProfile {
-  name:string;
+  name: string;
   role: 'student' | 'faculty' | 'admin';
   preferences: string;
   profileComplete: boolean;
   email: string;
+  college?: string;
+  adminPassword?: string; // For administrative role verification
 }
 
 export interface Course {
@@ -45,7 +47,7 @@ export interface Room {
   type: 'Lecture Hall' | 'Lab' | 'Classroom';
 }
 
-export type AppView = 'LOGIN' | 'PROFILE_SETUP' | 'DASHBOARD' | 'ADMIN';
+export type AppView = 'LANDING' | 'LOGIN' | 'PROFILE_SETUP' | 'DASHBOARD' | 'ADMIN';
 
 export interface AuthCredentials {
     email: string;

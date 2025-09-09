@@ -1,7 +1,8 @@
-// FIX: Create the main App component
+﻿// FIX: Create the main App component
 import React, { useState, useEffect } from 'react';
 import { getFirebaseAuth, createUserProfile, getUserProfile } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { LandingPage } from './components/Landingpage';
 import { Login } from './components/Login';
 import { ProfileSetup } from './components/ProfileSetup';
 import { Dashboard } from './components/Dashboard';
@@ -10,30 +11,8 @@ import { UserProfile, AppView, AuthCredentials } from './types';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [appView, setAppView] = useState<AppView>('LOGIN');
+  const [appView, setAppView] = useState<AppView>('LANDING');
   const [loading, setLoading] = useState(true);
-  // useEffect(() => {
-  //   const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
-  //     if (firebaseUser) {
-  //       // You may want to fetch user profile/role from Firestore here
-  //       // For now, treat all as students except a hardcoded admin
-  //       const isAdmin = firebaseUser.email === 'admin@test.com';
-  //       const userProfile: UserProfile = {
-  //         email: firebaseUser.email || '',
-  //         name: firebaseUser.displayName || firebaseUser.email || '',
-  //         role: isAdmin ? 'admin' : 'student',
-  //         preferences: '',
-  //         profileComplete: true,
-  //       };
-  //       setUser(userProfile);
-  //       setAppView(isAdmin ? 'ADMIN' : 'DASHBOARD');
-  //     } else {
-  //       setUser(null);
-  //       setAppView('LOGIN');
-  //     }
-  //   });
-  //   return () => unsubscribe();
-  // }, []);
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,25 +39,15 @@ const App: React.FC = () => {
         }
       } else {
         setUser(null);
-        setAppView('LOGIN');
+        setAppView('LANDING');
       }
       setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  const handleGoogleSignIn = () => {
-    setAuthError(null);
-    const newUser: UserProfile = {
-      email: 'new.user@google.com',
-      name: '',
-      role: 'student',
-      preferences: '',
-      profileComplete: false,
-    };
-    setUser(newUser);
-    localStorage.setItem('academica_user', JSON.stringify(newUser));
-    setAppView('PROFILE_SETUP');
+  const handleNavigateToLogin = () => {
+    setAppView('LOGIN');
   };
 
   const handleProfileSave = async (profileUpdates: Partial<UserProfile>) => {
@@ -94,26 +63,41 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('academica_user');
-    setAppView('LOGIN');
+    setAppView('LANDING');
   };
   
-  // Added no-op email handlers to satisfy props and avoid reference errors.
-  const handleEmailSignUp = (_credentials: AuthCredentials) => {
+  // Email handlers for actual Firebase authentication
+  const handleEmailSignUp = async (credentials: AuthCredentials) => {
     setAuthError(null);
+    // This will be handled by Firebase auth state change
   };
 
-  const handleEmailSignIn = (_credentials: AuthCredentials) => {
+  const handleEmailSignIn = async (credentials: AuthCredentials) => {
     setAuthError(null);
+    // This will be handled by Firebase auth state change
   };
   
   const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-white">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+            <p className="text-black">Loading...</p>
+          </div>
+        </div>
+      );
+    }
+
     switch(appView) {
+      case 'LANDING':
+        return <LandingPage onNavigateToLogin={handleNavigateToLogin} />;
       case 'LOGIN':
         return (
           <Login 
             onEmailSignUp={handleEmailSignUp} 
             onEmailSignIn={handleEmailSignIn} 
-            onGoogleSignIn={handleGoogleSignIn}
+            onGoogleSignIn={() => {}} // Handled by Firebase auth state change
             error={authError} 
           />
         );
@@ -124,10 +108,10 @@ const App: React.FC = () => {
       case 'DASHBOARD':
         return <Dashboard user={user!} onLogout={handleLogout} isAdmin={user?.role === 'admin'} />;
       default:
-        return null;
+        return <LandingPage onNavigateToLogin={handleNavigateToLogin} />;
     }
   };
-// ...existing code...
+
   return (
     <div className="bg-white min-h-screen">
       {renderContent()}
