@@ -14,9 +14,10 @@ import { Icon } from './Icons';
 interface DashboardProps {
   user: UserProfile;
   onLogout: () => void;
+  isAdmin?: boolean;
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY! });
 
 const slotSchema = {
     type: Type.OBJECT, 
@@ -69,45 +70,46 @@ const timetableSchema = {
     description: "The complete weekly timetable. Omit any days that have no classes."
 };
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { sender: 'model', text: `Hi ${user.name}! I can help you generate a course timetable. Just tell me what you need.` }
+    { sender: 'model', text: isAdmin
+      ? `Hi ${user.name}! You can generate a course timetable for students. Use the chat to create a new timetable.`
+      : `Hi ${user.name}! You can view your timetable here once it is finalized by the administrator.` }
   ]);
   const [timetableData, setTimetableData] = useState<TimetableData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const timetableRef = useRef<HTMLDivElement>(null);
 
-
+  // Only admins can generate timetables
   const handleSendMessage = async (message: string) => {
+    if (!isAdmin) return;
     setIsLoading(true);
     const userMessage: ChatMessage = { sender: 'user', text: message };
     setMessages(prev => [...prev, userMessage]);
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: `You are a university timetable generator. Create a JSON timetable based on the user's request. Take into account their preferences. Make the schedule realistic and avoid clashes.
-            USER_PREFERENCES: ${user.preferences || 'none'}
-            
-            PROMPT: ${message}`,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: timetableSchema,
-            },
-        });
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `You are a university timetable generator. Create a JSON timetable based on the user's request. Take into account their preferences. Make the schedule realistic and avoid clashes.
+        USER_PREFERENCES: ${user.preferences || 'none'}
         
-        const timetableJsonString = response.text;
-        
-        try {
-            const parsedData: TimetableData = JSON.parse(timetableJsonString);
-            setTimetableData(parsedData);
-            setMessages(prev => [...prev, { sender: 'model', text: "Here is your generated timetable. Let me know if you'd like any adjustments." }]);
-        } catch (e) {
-            console.error("Failed to parse timetable JSON:", e, "Received:", timetableJsonString);
-            setMessages(prev => [...prev, { sender: 'model', text: "I had trouble structuring the timetable. Could you try rephrasing your request?" }]);
-        }
+        PROMPT: ${message}`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: timetableSchema,
+        },
+      });
 
+      const timetableJsonString = response.text;
+      try {
+        const parsedData: TimetableData = JSON.parse(timetableJsonString);
+        setTimetableData(parsedData);
+        setMessages(prev => [...prev, { sender: 'model', text: "Here is your generated timetable. Let me know if you'd like any adjustments." }]);
+      } catch (e) {
+        console.error("Failed to parse timetable JSON:", e, "Received:", timetableJsonString);
+        setMessages(prev => [...prev, { sender: 'model', text: "I had trouble structuring the timetable. Could you try rephrasing your request?" }]);
+      }
     } catch (error) {
       console.error("Error generating timetable:", error);
       setMessages(prev => [...prev, { sender: 'model', text: "Sorry, I encountered an error while generating the timetable. Please try again later." }]);
@@ -155,41 +157,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           </button>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 flex-1 min-h-0">
-            <div className="lg:col-span-2 min-h-0 flex flex-col gap-4">
-                 <div className="flex justify-between items-center">
-                    <h2 className="text-lg font-bold text-black">Generated Timetable</h2>
-                    <div className="flex space-x-2">
-                        <button 
-                            onClick={handleDownloadPdf} 
-                            disabled={!timetableData} 
-                            className="flex items-center space-x-2 px-3 py-2 text-sm bg-white border border-black rounded-md text-black hover:bg-black/5 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                        >
-                            <Icon name="download" className="w-4 h-4" />
-                            <span>PDF</span>
-                        </button>
-                        <button 
-                            onClick={handleDownloadImage} 
-                            disabled={!timetableData} 
-                            className="flex items-center space-x-2 px-3 py-2 text-sm bg-white border border-black rounded-md text-black hover:bg-black/5 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                        >
-                             <Icon name="image" className="w-4 h-4" />
-                            <span>Image</span>
-                        </button>
-                    </div>
-                </div>
-                <div ref={timetableRef} className="flex-1 min-h-0">
-                  <Timetable data={timetableData} />
-                </div>
+          <div className="lg:col-span-2 min-h-0 flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-black">{isAdmin ? 'Generated Timetable' : 'Your Timetable'}</h2>
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={!timetableData}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm bg-white border border-black rounded-md text-black hover:bg-black/5 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <Icon name="download" className="w-4 h-4" />
+                  <span>PDF</span>
+                </button>
+                <button
+                  onClick={handleDownloadImage}
+                  disabled={!timetableData}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm bg-white border border-black rounded-md text-black hover:bg-black/5 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  <Icon name="image" className="w-4 h-4" />
+                  <span>Image</span>
+                </button>
+              </div>
             </div>
-            <div className="min-h-0">
-                <Chat 
-                    messages={messages} 
-                    onSendMessage={handleSendMessage} 
-                    isLoading={isLoading}
-                    title="Timetable Assistant"
-                    placeholder="e.g., Generate a timetable for a CS student"
-                />
+            <div ref={timetableRef} className="flex-1 min-h-0">
+              <Timetable data={timetableData} />
             </div>
+          </div>
+          <div className="min-h-0">
+            {isAdmin ? (
+              <Chat
+                messages={messages}
+                onSendMessage={handleSendMessage}
+                isLoading={isLoading}
+                title="Timetable Assistant"
+                placeholder="e.g., Generate a timetable for a CS student"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-black/60">
+                <Icon name="spinner" className="w-8 h-8 mb-2 animate-spin" />
+                <span>Waiting for administrator to finalize your timetable.</span>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>

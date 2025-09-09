@@ -13,8 +13,9 @@ interface SidebarProps {
 const SidebarContent: React.FC<Pick<SidebarProps, 'user' | 'onLogout'>> = ({ user, onLogout }) => (
     <div className="flex flex-col h-full bg-black text-white p-4">
         <div className="flex-1">
-            <div className="mb-8">
-                <h1 className="text-xl font-bold">Timetable AI</h1>
+            <div className="mb-8 flex items-center space-x-3">
+                <Icon name="logo" className="w-8 h-8 text-white" />
+                <h1 className="text-xl font-bold font-wakanda">Academica Flow</h1>
             </div>
             <div className="space-y-4">
                 <div className="flex items-center space-x-3 p-2 rounded-md">

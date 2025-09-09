@@ -51,3 +51,16 @@ export interface AuthCredentials {
     email: string;
     password?: string;
 }
+
+// Firestore admin-related types
+export interface AdminProfile {
+  email: string;
+  name: string;
+  role: 'admin';
+}
+
+export interface AdminSettings {
+  organizationName: string;
+  currentSemester?: string;
+  notes?: string;
+}
