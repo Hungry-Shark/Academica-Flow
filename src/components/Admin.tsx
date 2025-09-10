@@ -8,14 +8,15 @@ import { AdminData } from './AdminData';
 interface AdminProps {
   user: UserProfile;
   onLogout: () => void;
+  onNavigate?: (view: 'DASHBOARD' | 'PROFILE_EDIT' | 'PROFILE') => void;
 }
 
-export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
+export const Admin: React.FC<AdminProps> = ({ user, onLogout, onNavigate }) => {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
 
     return (
         <div className="flex h-screen bg-white">
-            <Sidebar user={user} onLogout={onLogout} isOpen={isSidebarOpen} setOpen={setSidebarOpen} />
+            <Sidebar user={user} onLogout={onLogout} isOpen={isSidebarOpen} setOpen={setSidebarOpen} onNavigate={(v) => onNavigate && onNavigate(v === 'PROFILE_EDIT' ? 'PROFILE' : v)} />
             <main className="flex-1 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 overflow-y-auto">
                 <div className="lg:hidden">
                     <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-md text-black bg-white border border-black">
@@ -27,4 +28,4 @@ export const Admin: React.FC<AdminProps> = ({ user, onLogout }) => {
             </main>
         </div>
     );
-};
+}; 

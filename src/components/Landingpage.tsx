@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
 import { Icon } from './Icons';
 
+import { AppView } from '../types';
+import { Footer } from './Footer';
+import { Header } from './Header';
+
 interface LandingPageProps {
   onNavigateToLogin: () => void;
+  setAppView: (view: AppView) => void;
+  isAuthenticated?: boolean;
+  onProfileClick?: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, setAppView, isAuthenticated = false, onProfileClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -17,25 +24,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) =
   };
 
   return (
-    <div className="font-['Poppins'] bg-white text-black min-h-screen">
+    <div className="font-['Poppins'] bg-white text-black min-h-screen flex flex-col">
+      <Header onLogoClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} onLoginClick={onNavigateToLogin} isAuthenticated={isAuthenticated} onProfileClick={onProfileClick} />
+
       {/* Menu Toggle */}
       <button
         onClick={toggleMenu}
         className="fixed top-6 right-6 z-[1001] cursor-pointer w-8 h-6 flex flex-col justify-between"
       >
-        <span className={`block w-full h-0.5 bg-black transition-all duration-300 ease-in-out origin-center ${
-          isMenuOpen ? 'translate-y-2.5 rotate-45' : '' 
+        <span className={`block w-full h-0.5 transition-all duration-300 ease-in-out origin-center ${
+          isMenuOpen ? 'translate-y-2.5 rotate-45 bg-white' : 'bg-black'
         }`}></span>
         <span className={`block w-full h-0.5 bg-black transition-all duration-300 ease-in-out origin-center ${
-          isMenuOpen ? 'opacity-0' : '' 
+          isMenuOpen ? 'opacity-0' : ''
         }`}></span>
-        <span className={`block w-full h-0.5 bg-black transition-all duration-300 ease-in-out origin-center ${
-          isMenuOpen ? '-translate-y-2.5 -rotate-45' : '' 
+        <span className={`block w-full h-0.5 transition-all duration-300 ease-in-out origin-center ${
+          isMenuOpen ? '-translate-y-2.5 -rotate-45 bg-white' : 'bg-black'
         }`}></span>
       </button>
 
       {/* Overlay Menu */}
-      <div className={`fixed top-0 left-64 w-[calc(100%-16rem)] h-full bg-black/95 flex justify-center items-center transform transition-transform duration-500 ease-in-out z-[1000] ${
+      <div className={`fixed top-0 left-0 w-full h-full bg-black flex justify-center items-center transform transition-transform duration-500 ease-in-out z-[1000] ${
         isMenuOpen ? 'translate-x-0' : 'translate-x-full' 
       }`}>
         <nav className="text-center">
@@ -43,57 +52,46 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) =
             <li className={`my-5 transition-all duration-400 ease-in-out ${
               isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
             }`} style={{ transitionDelay: isMenuOpen ? '0.3s' : '0s' }}>
-              <button onClick={closeMenu} className="cursor-pointer">
-                <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400">
+              <button onClick={() => { closeMenu(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="cursor-pointer">
+                <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400 font-wakanda">
                   Home
                 </a>
               </button>
             </li>
-            <li className={`my-5 transition-all duration-400 ease-in-out ${
-              isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
-            }`} style={{ transitionDelay: isMenuOpen ? '0.4s' : '0s' }}>
-              <button onClick={closeMenu} className="cursor-pointer">
-                <a href="#about" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400">
-                  About
-                </a>
-              </button>
-            </li>
-            <li className={`my-5 transition-all duration-400 ease-in-out ${
-              isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
-            }`} style={{ transitionDelay: isMenuOpen ? '0.5s' : '0s' }}>
-              <button onClick={closeMenu} className="cursor-pointer">
-                <a href="#contact" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400">
-                  Contact
-                </a>
-              </button>
-            </li>
-            <li className={`my-5 transition-all duration-400 ease-in-out ${
-              isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
-            }`} style={{ transitionDelay: isMenuOpen ? '0.6s' : '0s' }}>
-              <button onClick={() => { closeMenu(); onNavigateToLogin(); }} className="cursor-pointer">
-                <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400">
-                  Login
-                </a>
-              </button>
-            </li>
+            {isAuthenticated ? (
+              <li className={`my-5 transition-all duration-400 ease-in-out ${
+                isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
+              }`} style={{ transitionDelay: isMenuOpen ? '0.4s' : '0s' }}>
+                <button onClick={() => { closeMenu(); onProfileClick && onProfileClick(); }} className="cursor-pointer">
+                  <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400 font-wakanda">
+                    Profile
+                  </a>
+                </button>
+              </li>
+            ) : (
+              <li className={`my-5 transition-all duration-400 ease-in-out ${
+                isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
+              }`} style={{ transitionDelay: isMenuOpen ? '0.4s' : '0s' }}>
+                <button onClick={() => { closeMenu(); onNavigateToLogin(); }} className="cursor-pointer">
+                  <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400 font-wakanda">
+                    Login
+                  </a>
+                </button>
+              </li>
+            )}
           </ul>
         </nav>
       </div>
 
       {/* Main Content */}
-      <main className={`p-5 w-full h-screen box-border transition-all duration-500 ease-in-out ${
-        isMenuOpen ? 'w-64' : 'w-full' 
-      }`}>
+      <main className="p-5 w-full box-border flex-1 pt-28">
         {/* Hero Section */}
-        <div className="flex flex-col items-center justify-center h-full text-center px-4">
-          <div className="mb-8">
-            <Icon name="logo" className="w-16 h-16 text-black mx-auto mb-4" />
-            <h1 className="text-6xl font-bold mb-4">Academica Flow</h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-2xl">
-              Streamline your academic journey with intelligent timetable management. 
-              Built for students, faculty, and administrators.
-            </p>
-          </div>
+        <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
+          <h1 className="text-6xl font-bold mb-4">Welcome to Academica Flow</h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl">
+            Streamline your academic journey with intelligent timetable management. 
+            Built for students, faculty, and administrators.
+          </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-12">
             <button
@@ -114,21 +112,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) =
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl">
             <div className="p-6 border border-gray-200 rounded-lg">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-2xl"></span>
+                <Icon name="calendar" className="w-6 h-6 text-blue-500" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Smart Timetables</h3>
               <p className="text-gray-600">AI-powered timetable generation that considers preferences and constraints.</p>
             </div>
             <div className="p-6 border border-gray-200 rounded-lg">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-2xl"></span>
+                <Icon name="users" className="w-6 h-6 text-green-500" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Role-Based Access</h3>
               <p className="text-gray-600">Different interfaces for students, faculty, and administrators.</p>
             </div>
             <div className="p-6 border border-gray-200 rounded-lg">
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-2xl"></span>
+                <Icon name="tools" className="w-6 h-6 text-purple-500" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Easy Management</h3>
               <p className="text-gray-600">Intuitive tools for managing courses, rooms, and schedules.</p>
@@ -136,7 +134,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) =
           </div>
         </div>
 
-        {/* About Section */}
         <section id="about" className="py-20 px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-4xl font-bold mb-8">About Academica Flow</h2>
@@ -168,7 +165,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) =
           </div>
         </section>
 
-        {/* Contact Section */}
         <section id="contact" className="py-20 px-4 bg-gray-50">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-4xl font-bold mb-8">Get in Touch</h2>
@@ -184,7 +180,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin }) =
             </button>
           </div>
         </section>
+
       </main>
+
+      <Footer />
     </div>
   );
-};
+}; 
