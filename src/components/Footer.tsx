@@ -4,7 +4,9 @@ import { Icon } from './Icons';
 export const Footer: React.FC = () => {
   return (
     <footer className="relative border-t border-white/20 bg-black text-white shadow-[0_-8px_32px_rgba(31,38,135,0.08)]">
-      <div className="pointer-events-none absolute -top-6 left-0 right-0 h-6 bg-gradient-to-t from-black to-transparent"></div>
+      {/* Extended gradient background with glassmorphism */}
+      <div className="pointer-events-none absolute -top-8 left-0 right-0 h-8 bg-gradient-to-t from-black/80 to-transparent backdrop-blur-sm"></div>
+      
       <div className="max-w-6xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div>
           <div className="flex items-center space-x-2 mb-3">

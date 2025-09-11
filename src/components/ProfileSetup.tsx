@@ -26,9 +26,9 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave }) => {
   };
 
   return (
-    <div className="min-h-screen bg-white text-black flex items-center justify-center p-8">
-      <div className="max-w-md w-full">
-        <h1 className="text-2xl font-bold mb-6">Complete your profile</h1>
+    <div className="min-h-screen bg-white text-black flex items-center justify-center p-4 sm:p-8">
+      <div className="max-w-md w-full mx-auto">
+        <h1 className="text-2xl font-bold mb-6 text-center sm:text-left">Complete your profile</h1>
         <div className="space-y-4">
           <div>
             <label className="block text-sm mb-1">Email</label>
@@ -38,13 +38,18 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave }) => {
             <label className="block text-sm mb-1">Name</label>
             <input value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 bg-white border border-black rounded" />
           </div>
-          <div>
+          <div className="relative">
             <label className="block text-sm mb-1">Role</label>
-            <select value={role} onChange={(e) => setRole(e.target.value as any)} className="w-full p-3 bg-white border border-black rounded">
+            <select value={role} onChange={(e) => setRole(e.target.value as any)} className="w-full p-3 bg-white border border-black rounded appearance-none relative z-10">
               <option value="student">Student</option>
               <option value="faculty">Faculty</option>
               <option value="admin">Admin</option>
             </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 mt-6">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+              </svg>
+            </div>
           </div>
           <div>
             <label className="block text-sm mb-1">Preferences</label>

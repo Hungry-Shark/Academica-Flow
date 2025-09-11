@@ -1,32 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { AdministrativeData, Department, FacultyMember, StudentInfo, RoomInfo } from '../types';
+import { AdministrativeData, Department, FacultyMember, StudentInfo, RoomInfo, UserProfile } from '../types';
 import { getAdministrativeData, setAdministrativeData } from '../firebase';
 import { Icon } from './Icons';
+import { Sidebar } from './Sidebar';
 
 interface AdministrativeInfoProps {
-  user: any;
+  user: UserProfile;
   onLogout: () => void;
-  onNavigate: (view: 'DASHBOARD' | 'PROFILE_EDIT' | 'GENERATE_TT') => void;
+  onNavigate: (view: 'DASHBOARD' | 'PROFILE_EDIT' | 'GENERATE_TT' | 'ADMIN_INFO') => void;
 }
 
 export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, onLogout, onNavigate }) => {
   const [adminData, setAdminData] = useState<AdministrativeData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'departments' | 'faculties' | 'students' | 'rooms'>('departments');
+  const [activeTab, setActiveTab] = useState<'departments' | 'faculties' | 'students' | 'rooms' | 'admin-notes'>('admin-notes');
   const [isEditing, setIsEditing] = useState(false);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     loadAdminData();
   }, [user.college]);
 
   const loadAdminData = async () => {
-    if (!user.college) return;
     setLoading(true);
-    const data = await getAdministrativeData(user.college);
-    if (data) {
-      setAdminData(data);
-    } else {
-      // Initialize with empty data
+    try {
+      if (!user.college) {
+        // Initialize with empty data if no college
+        const emptyData: AdministrativeData = {
+          departments: [],
+          faculties: [],
+          students: [],
+          rooms: [],
+          lastUpdated: Date.now()
+        };
+        setAdminData(emptyData);
+        setLoading(false);
+        return;
+      }
+
+      const data = await getAdministrativeData(user.college, user.uid);
+      if (data) {
+        setAdminData(data);
+      } else {
+        // Initialize with empty data
+        const emptyData: AdministrativeData = {
+          departments: [],
+          faculties: [],
+          students: [],
+          rooms: [],
+          lastUpdated: Date.now()
+        };
+        setAdminData(emptyData);
+      }
+    } catch (error) {
+      console.error('Error loading administrative data:', error);
+      // Initialize with empty data on error
       const emptyData: AdministrativeData = {
         departments: [],
         faculties: [],
@@ -35,14 +64,41 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
         lastUpdated: Date.now()
       };
       setAdminData(emptyData);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const saveAdminData = async () => {
-    if (!user.college || !adminData) return;
-    await setAdministrativeData(user.college, adminData);
-    setIsEditing(false);
+    if (!user.college || !adminData) {
+      console.error('Cannot save: missing college or admin data', { college: user.college, hasAdminData: !!adminData });
+      alert('Error: Missing college information or administrative data');
+      return;
+    }
+
+    try {
+      console.log('Saving administrative data for college:', user.college);
+      console.log('Data to save:', adminData);
+      
+      // Update the lastUpdated timestamp
+      const dataToSave = {
+        ...adminData,
+        lastUpdated: Date.now()
+      };
+      
+      await setAdministrativeData(user.college, dataToSave, user.uid);
+      console.log('Administrative data saved successfully');
+      
+      // Update local state with the saved data
+      setAdminData(dataToSave);
+      setIsEditing(false);
+      
+      // Show success message
+      alert('Administrative data saved successfully!');
+    } catch (error) {
+      console.error('Error saving administrative data:', error);
+      alert('Error saving data. Please try again.');
+    }
   };
 
   const addDepartment = () => {
@@ -138,68 +194,28 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
 
   return (
     <div className="flex h-screen bg-white">
-      <div className="w-64 bg-black text-white p-4">
-        <div className="mb-8 flex items-center space-x-3">
-          <Icon name="logo" className="w-8 h-8 text-white" />
-          <h1 className="text-xl font-bold font-wakanda">Academica Flow</h1>
-        </div>
-        <div className="space-y-4">
-          <div className="flex items-center space-x-3 p-2 rounded-md">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-black font-bold text-lg">
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="font-semibold">{user.name}</p>
-              <p className="text-sm text-white/70 capitalize">{user.role}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigate('DASHBOARD')}
-            className="w-full text-left p-2 rounded-md hover:bg-white/10 transition-colors flex items-center space-x-3"
-          >
-            <Icon name="dashboard" className="w-5 h-5" />
-            <span>Dashboard</span>
-          </button>
-          <button
-            onClick={() => onNavigate('GENERATE_TT')}
-            className="w-full text-left p-2 rounded-md hover:bg-white/10 transition-colors flex items-center space-x-3"
-          >
-            <Icon name="calendar" className="w-5 h-5" />
-            <span>Generate TT</span>
-          </button>
-          <button
-            onClick={() => onNavigate('PROFILE_EDIT')}
-            className="w-full text-left p-2 rounded-md hover:bg-white/10 transition-colors flex items-center space-x-3"
-          >
-            <Icon name="profile" className="w-5 h-5" />
-            <span>Profile</span>
-          </button>
-        </div>
-        <div className="mt-auto">
-          <button
-            onClick={onLogout}
-            className="w-full text-left p-2 rounded-md hover:bg-white/10 transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+      <Sidebar user={user} onLogout={onLogout} isOpen={isSidebarOpen} setOpen={setSidebarOpen} onNavigate={onNavigate} />
 
       <main className="flex-1 flex flex-col p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-black">Administrative Information</h1>
-          <div className="flex space-x-2">
+        <div className="lg:hidden mb-4">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-md text-black bg-white border border-black">
+            <Icon name="menu" className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-black">Administrative Information</h1>
+          <div className="flex space-x-2 flex-shrink-0">
             {isEditing ? (
               <>
                 <button
                   onClick={saveAdminData}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+                  className="px-3 py-2 sm:px-4 text-sm sm:text-base bg-green-600 text-white rounded-md hover:bg-green-700 transition"
                 >
                   Save Changes
                 </button>
                 <button
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition"
+                  className="px-3 py-2 sm:px-4 text-sm sm:text-base bg-gray-500 text-white rounded-md hover:bg-gray-600 transition"
                 >
                   Cancel
                 </button>
@@ -207,7 +223,7 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
             ) : (
               <button
                 onClick={() => setIsEditing(true)}
-                className="px-4 py-2 bg-black text-white rounded-md hover:bg-black/80 transition"
+                className="px-3 py-2 sm:px-4 text-sm sm:text-base bg-black text-white rounded-md hover:bg-black/80 transition"
               >
                 Edit
               </button>
@@ -215,23 +231,53 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
           </div>
         </div>
 
-        <div className="flex space-x-4 mb-6">
-          {(['departments', 'faculties', 'students', 'rooms'] as const).map((tab) => (
+        <div className="flex space-x-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+          {(['admin-notes', 'departments', 'faculties', 'students', 'rooms'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-md transition ${
+              className={`px-4 py-2 rounded-md transition whitespace-nowrap flex-shrink-0 ${
                 activeTab === tab
                   ? 'bg-black text-white'
                   : 'bg-gray-200 text-black hover:bg-gray-300'
               }`}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'admin-notes' ? 'Admin Notes' : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </div>
 
         <div className="flex-1 overflow-auto">
+          {activeTab === 'admin-notes' && (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold">Administrative Data</h2>
+                {isEditing && (
+                  <button
+                    onClick={() => {
+                      // Save admin notes logic here
+                      setIsEditing(false);
+                    }}
+                    className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+                  >
+                    Save Notes
+                  </button>
+                )}
+              </div>
+              <div className="bg-white border border-black rounded p-4">
+                <h3 className="text-lg font-bold mb-2 text-black">Admin Notes</h3>
+                <textarea 
+                  className="w-full border border-black p-2" 
+                  rows={6} 
+                  value={adminNotes} 
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  disabled={!isEditing}
+                />
+                <div className="mt-2 text-sm text-black/70">(Administrative notes and data)</div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'departments' && (
             <div>
               <div className="flex justify-between items-center mb-4">

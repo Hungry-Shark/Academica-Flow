@@ -14,6 +14,22 @@ const firebaseConfig = {
    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+// Validate Firebase configuration
+if (!firebaseConfig.apiKey) {
+  console.error('Firebase API Key is missing. Please check your environment variables.');
+  throw new Error('Firebase API Key is required');
+}
+
+if (!firebaseConfig.authDomain) {
+  console.error('Firebase Auth Domain is missing. Please check your environment variables.');
+  throw new Error('Firebase Auth Domain is required');
+}
+
+if (!firebaseConfig.projectId) {
+  console.error('Firebase Project ID is missing. Please check your environment variables.');
+  throw new Error('Firebase Project ID is required');
+}
+
 // Initialize Firebase only when needed
 let auth;
 let googleProvider;
@@ -42,7 +58,12 @@ export async function getUserProfile(userId: string) {
     if (!db) initializeFirebase();
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
-    return userSnap.exists() ? userSnap.data() as UserProfile : null;
+    if (userSnap.exists()) {
+        const userData = userSnap.data() as UserProfile;
+        // Ensure uid is always present
+        return { ...userData, uid: userId };
+    }
+    return null;
 }
 
 // Admin data
@@ -109,18 +130,70 @@ export async function raiseTimetableQuery(userUid: string, message: string) {
 }
 
 // Administrative data functions
-export async function setAdministrativeData(organizationName: string, data: AdministrativeData) {
+export async function setAdministrativeData(organizationName: string, data: AdministrativeData, userUid?: string) {
     if (!db) initializeFirebase();
-    const ref = doc(db, 'administrativeData', organizationName.toLowerCase());
-    await setDoc(ref, { ...data, lastUpdated: Date.now() }, { merge: true });
+    
+    try {
+        console.log('Firestore: Saving administrative data for organization:', organizationName);
+        
+        // Use users collection with a specific document structure
+        if (!userUid) {
+            throw new Error('User UID is required for saving administrative data');
+        }
+        
+        const ref = doc(db, 'users', userUid);
+        
+        // Store administrative data as a field in the user document
+        const adminDataField = {
+            [`administrativeData_${organizationName.toLowerCase()}`]: {
+                departments: data.departments || [],
+                faculties: data.faculties || [],
+                students: data.students || [],
+                rooms: data.rooms || [],
+                lastUpdated: Date.now(),
+                organizationName: organizationName
+            }
+        };
+        
+        console.log('Firestore: Data to save:', adminDataField);
+        await setDoc(ref, adminDataField, { merge: true });
+        console.log('Firestore: Administrative data saved successfully');
+    } catch (error) {
+        console.error('Firestore: Error saving administrative data:', error);
+        throw error;
+    }
 }
 
-export async function getAdministrativeData(organizationName?: string | null) {
+export async function getAdministrativeData(organizationName?: string | null, userUid?: string) {
     if (!db) initializeFirebase();
-    if (!organizationName) return null;
-    const ref = doc(db, 'administrativeData', organizationName.toLowerCase());
-    const snap = await getDoc(ref);
-    return snap.exists() ? snap.data() as AdministrativeData : null;
+    if (!organizationName || !userUid) return null;
+    
+    try {
+        const ref = doc(db, 'users', userUid);
+        const snap = await getDoc(ref);
+        
+        if (snap.exists()) {
+            const userData = snap.data();
+            const adminDataField = userData[`administrativeData_${organizationName.toLowerCase()}`];
+            return adminDataField || null;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error getting administrative data:', error);
+        return null;
+    }
+}
+
+// Query submission function
+export async function submitUserQuery(queryData: { name: string; email: string; subject: string; message: string }) {
+    if (!db) initializeFirebase();
+    const ref = doc(db, 'queries', Date.now().toString());
+    await setDoc(ref, {
+        ...queryData,
+        submittedAt: Date.now(),
+        status: 'pending'
+    });
 }
 
 // Export getters that ensure Firebase is initialized

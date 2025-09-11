@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Icon } from './Icons';
+import { QueryForm } from './QueryForm';
+import { submitUserQuery } from '../firebase';
 
 import { AppView } from '../types';
 import { Footer } from './Footer';
@@ -14,6 +16,7 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, setAppView, isAuthenticated = false, onProfileClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showQueryForm, setShowQueryForm] = useState(false);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -21,6 +24,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
 
   const closeMenu = () => {
     setIsMenuOpen(false);
+  };
+
+  const handleQuerySubmit = async (queryData: { name: string; email: string; subject: string; message: string }) => {
+    await submitUserQuery(queryData);
   };
 
   return (
@@ -93,20 +100,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
             Built for students, faculty, and administrators.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 mb-12">
-            <button
-              onClick={onNavigateToLogin}
-              className="px-8 py-4 bg-black text-white rounded-lg text-lg font-semibold hover:bg-gray-800 transition-colors duration-300"
-            >
-              Get Started
-            </button>
-            <button
-              onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
-              className="px-8 py-4 border-2 border-black text-black rounded-lg text-lg font-semibold hover:bg-black hover:text-white transition-colors duration-300"
-            >
-              Learn More
-            </button>
-          </div>
 
           {/* Features Preview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl">
@@ -143,7 +136,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
               optimal resource utilization while maintaining flexibility for all stakeholders.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
-              <div className="text-left">
+              <div className="text-left md:text-left text-center">
                 <h3 className="text-2xl font-semibold mb-4">For Students</h3>
                 <ul className="space-y-2 text-gray-600">
                   <li> View personalized timetables</li>
@@ -152,7 +145,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
                   <li> Real-time notifications for changes</li>
                 </ul>
               </div>
-              <div className="text-left">
+              <div className="text-left md:text-left text-center">
                 <h3 className="text-2xl font-semibold mb-4">For Faculty & Admin</h3>
                 <ul className="space-y-2 text-gray-600">
                   <li> Generate and manage timetables</li>
@@ -173,10 +166,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
               implementing Academica Flow in your institution.
             </p>
             <button
-              onClick={onNavigateToLogin}
+              onClick={() => setShowQueryForm(true)}
               className="px-8 py-4 bg-black text-white rounded-lg text-lg font-semibold hover:bg-gray-800 transition-colors duration-300"
             >
-              Start Your Journey
+              Any Questions?
             </button>
           </div>
         </section>
@@ -184,6 +177,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
       </main>
 
       <Footer />
+
+      {/* Query Form Modal */}
+      {showQueryForm && (
+        <QueryForm
+          isAuthenticated={isAuthenticated}
+          onClose={() => setShowQueryForm(false)}
+          onNavigateToLogin={onNavigateToLogin}
+          onSubmitQuery={handleQuerySubmit}
+        />
+      )}
     </div>
   );
 }; 

@@ -1,31 +1,27 @@
 // FIX: Create the Admin component
-import React, { useState } from 'react';
-import { Sidebar } from './Sidebar';
+import React, { useEffect } from 'react';
 import { UserProfile } from '../types';
-import { Icon } from './Icons';
-import { AdminData } from './AdminData';
 
 interface AdminProps {
   user: UserProfile;
   onLogout: () => void;
-  onNavigate?: (view: 'DASHBOARD' | 'PROFILE_EDIT' | 'PROFILE') => void;
+  onNavigate?: (view: 'DASHBOARD' | 'PROFILE_EDIT' | 'PROFILE' | 'ADMIN_INFO' | 'GENERATE_TT') => void;
 }
 
 export const Admin: React.FC<AdminProps> = ({ user, onLogout, onNavigate }) => {
-    const [isSidebarOpen, setSidebarOpen] = useState(false);
+    // Redirect admin users to Dashboard instead of showing a separate admin page
+    useEffect(() => {
+        if (onNavigate) {
+            onNavigate('DASHBOARD');
+        }
+    }, [onNavigate]);
 
     return (
-        <div className="flex h-screen bg-white">
-            <Sidebar user={user} onLogout={onLogout} isOpen={isSidebarOpen} setOpen={setSidebarOpen} onNavigate={(v) => onNavigate && onNavigate(v === 'PROFILE_EDIT' ? 'PROFILE' : v)} />
-            <main className="flex-1 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 overflow-y-auto">
-                <div className="lg:hidden">
-                    <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-md text-black bg-white border border-black">
-                        <Icon name="menu" className="w-6 h-6" />
-                    </button>
-                </div>
-                <h1 className="text-2xl font-bold text-black">Administrative Data</h1>
-                <AdminData />
-            </main>
+        <div className="flex items-center justify-center h-screen bg-white">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+                <p className="text-black">Redirecting to Dashboard...</p>
+            </div>
         </div>
     );
 }; 

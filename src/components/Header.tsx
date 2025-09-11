@@ -30,9 +30,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onLoginClick, isAut
               <span className={`font-bold font-wakanda ${scrolled ? 'text-lg' : 'text-2xl'}`}>Academica Flow</span>
             </button>
             <div className="hidden md:flex items-center space-x-6 text-sm">
-              {isAuthenticated && (
-                <button onClick={onProfileClick} className="text-black/80 hover:text-black transition-colors">Profile</button>
-              )}
+              {/* Removed center Profile navigation */}
             </div>
             <div className="flex items-center space-x-2">
               {!isAuthenticated ? (

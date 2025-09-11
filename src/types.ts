@@ -17,6 +17,7 @@ export interface ChatMessage {
 }
 
 export interface UserProfile {
+  uid: string;
   name: string;
   role: 'student' | 'faculty' | 'admin';
   preferences: string;
@@ -47,7 +48,7 @@ export interface Room {
   type: 'Lecture Hall' | 'Lab' | 'Classroom';
 }
 
-export type AppView = 'LANDING' | 'LOGIN' | 'PROFILE_SETUP' | 'DASHBOARD' | 'ADMIN' | 'ABOUT' | 'CONTACT' | 'PROFILE' | 'PROFILE_EDIT' | 'GENERATE_TT';
+export type AppView = 'LANDING' | 'LOGIN' | 'PROFILE_SETUP' | 'DASHBOARD' | 'ADMIN' | 'ABOUT' | 'CONTACT' | 'PROFILE' | 'PROFILE_EDIT' | 'GENERATE_TT' | 'ADMIN_INFO';
 
 export interface AuthCredentials {
     email: string;

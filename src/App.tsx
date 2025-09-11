@@ -12,6 +12,7 @@ import { Contact } from './components/Contact';
 import { UserProfile, AppView, AuthCredentials } from './types';
 import { Profile } from './components/Profile';
 import { GenerateTT } from './components/GenerateTT';
+import { AdministrativeInfo } from './components/AdministrativeInfo';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -28,8 +29,13 @@ const App: React.FC = () => {
         const userProfile = await getUserProfile(firebaseUser.uid);
         if (userProfile) {
           setUser(userProfile);
-          // Only auto-route if the user has initiated the auth flow from Landing
-          if (flowInitiated) {
+          // Check if user has a pending query from before login
+          const pendingQuery = localStorage.getItem('pendingQuery');
+          if (pendingQuery) {
+            // User returned from login with a pending query, show landing page with form
+            setAppView('LANDING');
+          } else if (flowInitiated) {
+            // Only auto-route if the user has initiated the auth flow from Landing
             if (!userProfile.profileComplete) {
               setAppView('PROFILE_SETUP');
             } else {
@@ -39,6 +45,7 @@ const App: React.FC = () => {
         } else {
           // New user, create default profile; route only if flow was initiated
           const newUser: UserProfile = {
+            uid: firebaseUser.uid,
             email: firebaseUser.email || '',
             name: firebaseUser.displayName || '',
             role: 'student',
@@ -141,8 +148,12 @@ const App: React.FC = () => {
       
       case 'PROFILE':
         return <Profile user={user!} onLogout={handleLogout} onNavigate={setAppView} />;
+      case 'PROFILE_EDIT':
+        return <Profile user={user!} onLogout={handleLogout} onNavigate={setAppView} />;
       case 'GENERATE_TT':
         return <GenerateTT user={user!} onLogout={handleLogout} onNavigate={setAppView} />;
+      case 'ADMIN_INFO':
+        return <AdministrativeInfo user={user!} onLogout={handleLogout} onNavigate={setAppView} />;
       default:
         return <LandingPage onNavigateToLogin={handleNavigateToLogin} setAppView={setAppView} isAuthenticated={!!user} onProfileClick={() => setAppView('PROFILE')} />;
     }

@@ -13,7 +13,7 @@ import { setOrgTimetable } from '../firebase';
 interface GenerateTTProps {
   user: UserProfile;
   onLogout: () => void;
-  onNavigate: (view: 'DASHBOARD' | 'PROFILE_EDIT' | 'GENERATE_TT') => void;
+  onNavigate: (view: 'DASHBOARD' | 'PROFILE_EDIT' | 'GENERATE_TT' | 'ADMIN_INFO') => void;
 }
 
 const ai = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY!);
