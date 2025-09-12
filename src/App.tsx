@@ -19,8 +19,6 @@ const App: React.FC = () => {
   const [appView, setAppView] = useState<AppView>('LANDING');
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  // New: only navigate away from LANDING after explicit user intent
-  const [flowInitiated, setFlowInitiated] = useState(false);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -34,8 +32,8 @@ const App: React.FC = () => {
           if (pendingQuery) {
             // User returned from login with a pending query, show landing page with form
             setAppView('LANDING');
-          } else if (flowInitiated) {
-            // Only auto-route if the user has initiated the auth flow from Landing
+          } else {
+            // Auto-route authenticated users to their appropriate dashboard
             if (!userProfile.profileComplete) {
               setAppView('PROFILE_SETUP');
             } else {
@@ -43,7 +41,7 @@ const App: React.FC = () => {
             }
           }
         } else {
-          // New user, create default profile; route only if flow was initiated
+          // New user, create default profile and route to setup
           const newUser: UserProfile = {
             uid: firebaseUser.uid,
             email: firebaseUser.email || '',
@@ -54,20 +52,25 @@ const App: React.FC = () => {
           };
           await createUserProfile(firebaseUser.uid, newUser);
           setUser(newUser);
-          if (flowInitiated) setAppView('PROFILE_SETUP');
+          setAppView('PROFILE_SETUP');
         }
       } else {
         setUser(null);
-        // Always return to LANDING when signed out
-        setAppView('LANDING');
+        // Only return to LANDING when explicitly signed out, not on refresh
+        const savedView = localStorage.getItem('lastAppView');
+        if (savedView && savedView !== 'LANDING') {
+          // User was on a protected page, redirect to login
+          setAppView('LOGIN');
+        } else {
+          setAppView('LANDING');
+        }
       }
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [flowInitiated]);
+  }, []);
 
   const handleNavigateToLogin = async () => {
-    setFlowInitiated(true);
     const auth = getFirebaseAuth();
     // If already signed in, decide destination immediately
     if (auth.currentUser) {
@@ -99,8 +102,14 @@ const App: React.FC = () => {
     signOut(auth).catch(() => {/* noop */});
     setUser(null);
     localStorage.removeItem('academica_user');
-    setFlowInitiated(false);
+    localStorage.removeItem('lastAppView');
     setAppView('LANDING');
+  };
+
+  // Save current view to localStorage
+  const saveCurrentView = (view: AppView) => {
+    localStorage.setItem('lastAppView', view);
+    setAppView(view);
   };
   
   // Email handlers for actual Firebase authentication
@@ -128,7 +137,7 @@ const App: React.FC = () => {
 
     switch(appView) {
       case 'LANDING':
-        return <LandingPage onNavigateToLogin={handleNavigateToLogin} setAppView={setAppView} isAuthenticated={!!user} onProfileClick={() => setAppView('PROFILE')} />;
+        return <LandingPage onNavigateToLogin={handleNavigateToLogin} setAppView={saveCurrentView} isAuthenticated={!!user} onProfileClick={() => saveCurrentView('PROFILE')} onLogout={handleLogout} />;
       case 'LOGIN':
         return (
           <Login 
@@ -136,26 +145,26 @@ const App: React.FC = () => {
             onEmailSignIn={handleEmailSignIn} 
             onGoogleSignIn={() => {}} // Handled by Firebase auth state change
             error={authError}
-            onBack={() => setAppView('LANDING')}
+            onBack={() => saveCurrentView('LANDING')}
           />
         );
       case 'PROFILE_SETUP':
         return <ProfileSetup user={user!} onSave={handleProfileSave} />;
       case 'ADMIN':
-        return <Admin user={user!} onLogout={handleLogout} onNavigate={setAppView as any} />;
+        return <Admin user={user!} onLogout={handleLogout} onNavigate={saveCurrentView as any} />;
       case 'DASHBOARD':
-        return <Dashboard user={user!} onLogout={handleLogout} isAdmin={user?.role === 'admin'} onNavigate={setAppView} />;
+        return <Dashboard user={user!} onLogout={handleLogout} isAdmin={user?.role === 'admin'} onNavigate={saveCurrentView} />;
       
       case 'PROFILE':
-        return <Profile user={user!} onLogout={handleLogout} onNavigate={setAppView} />;
+        return <Profile user={user!} onLogout={handleLogout} onNavigate={saveCurrentView} />;
       case 'PROFILE_EDIT':
-        return <Profile user={user!} onLogout={handleLogout} onNavigate={setAppView} />;
+        return <Profile user={user!} onLogout={handleLogout} onNavigate={saveCurrentView} />;
       case 'GENERATE_TT':
-        return <GenerateTT user={user!} onLogout={handleLogout} onNavigate={setAppView} />;
+        return <GenerateTT user={user!} onLogout={handleLogout} onNavigate={saveCurrentView} />;
       case 'ADMIN_INFO':
-        return <AdministrativeInfo user={user!} onLogout={handleLogout} onNavigate={setAppView} />;
+        return <AdministrativeInfo user={user!} onLogout={handleLogout} onNavigate={saveCurrentView} />;
       default:
-        return <LandingPage onNavigateToLogin={handleNavigateToLogin} setAppView={setAppView} isAuthenticated={!!user} onProfileClick={() => setAppView('PROFILE')} />;
+        return <LandingPage onNavigateToLogin={handleNavigateToLogin} setAppView={saveCurrentView} isAuthenticated={!!user} onProfileClick={() => saveCurrentView('PROFILE')} />;
     }
   };
 

@@ -12,9 +12,10 @@ interface LandingPageProps {
   setAppView: (view: AppView) => void;
   isAuthenticated?: boolean;
   onProfileClick?: () => void;
+  onLogout?: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, setAppView, isAuthenticated = false, onProfileClick }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, setAppView, isAuthenticated = false, onProfileClick, onLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showQueryForm, setShowQueryForm] = useState(false);
 
@@ -66,15 +67,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
               </button>
             </li>
             {isAuthenticated ? (
-              <li className={`my-5 transition-all duration-400 ease-in-out ${
-                isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
-              }`} style={{ transitionDelay: isMenuOpen ? '0.4s' : '0s' }}>
-                <button onClick={() => { closeMenu(); onProfileClick && onProfileClick(); }} className="cursor-pointer">
-                  <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400 font-wakanda">
-                    Profile
-                  </a>
-                </button>
-              </li>
+              <>
+                <li className={`my-5 transition-all duration-400 ease-in-out ${
+                  isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
+                }`} style={{ transitionDelay: isMenuOpen ? '0.4s' : '0s' }}>
+                  <button onClick={() => { closeMenu(); onProfileClick && onProfileClick(); }} className="cursor-pointer">
+                    <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400 font-wakanda">
+                      Profile
+                    </a>
+                  </button>
+                </li>
+                <li className={`my-5 transition-all duration-400 ease-in-out ${
+                  isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
+                }`} style={{ transitionDelay: isMenuOpen ? '0.5s' : '0s' }}>
+                  <button onClick={() => { closeMenu(); onLogout && onLogout(); }} className="cursor-pointer">
+                    <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-red-400 font-wakanda">
+                      Logout
+                    </a>
+                  </button>
+                </li>
+              </>
             ) : (
               <li className={`my-5 transition-all duration-400 ease-in-out ${
                 isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 

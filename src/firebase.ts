@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { initializeFirestore, connectFirestoreEmulator, doc, setDoc, getDoc } from 'firebase/firestore';
+import { connectAuthEmulator } from 'firebase/auth';
 import { UserProfile, AdminProfile, AdminSettings, TimetableData, AdministrativeData } from './types';
 
 // Firebase configuration
@@ -42,9 +43,26 @@ export function initializeFirebase() {
         // Ensure persistence so auto-login works after refresh/new tab
         setPersistence(auth, browserLocalPersistence).catch(() => {/* noop */});
         googleProvider = new GoogleAuthProvider();
-        db = getFirestore(app);
+        // Improve connectivity in restrictive networks by forcing/auto-detecting long polling
+        db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+
+        // Optional: use local emulators during development
+        if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS === 'true') {
+            try {
+                connectFirestoreEmulator(db, '127.0.0.1', Number(import.meta.env.VITE_FIRESTORE_EMULATOR_PORT) || 8080);
+                connectAuthEmulator(auth, `http://127.0.0.1:${Number(import.meta.env.VITE_AUTH_EMULATOR_PORT) || 9099}`);
+            } catch {/* noop */}
+        }
     }
     return { auth, googleProvider, db };
+}
+
+// Helper to create a safe organization key for doc IDs/fields
+function sanitizeOrgKey(organizationName: string) {
+    return organizationName
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9_-]+/g, '-');
 }
 
 // User data functions
@@ -110,16 +128,34 @@ export async function getUserTimetable(userUid: string) {
 // Organization-level timetable keyed by college/school name
 export async function setOrgTimetable(organizationName: string, timetable: TimetableData) {
     if (!db) initializeFirebase();
-    const ref = doc(db, 'orgTimetables', organizationName.toLowerCase());
-    await setDoc(ref, { data: timetable, updatedAt: Date.now() }, { merge: true });
+    if (!auth?.currentUser) {
+        console.warn('User not authenticated, cannot save timetable');
+        return;
+    }
+    try {
+        const ref = doc(db, 'orgTimetables', organizationName.toLowerCase());
+        await setDoc(ref, { data: timetable, updatedAt: Date.now() }, { merge: true });
+    } catch (error) {
+        console.error('Error saving timetable:', error);
+        throw error;
+    }
 }
 
 export async function getOrgTimetable(organizationName?: string | null) {
     if (!db) initializeFirebase();
     if (!organizationName) return null;
-    const ref = doc(db, 'orgTimetables', organizationName.toLowerCase());
-    const snap = await getDoc(ref);
-    return snap.exists() ? (snap.data() as { data: TimetableData }).data : null;
+    if (!auth?.currentUser) {
+        console.warn('User not authenticated, cannot get timetable');
+        return null;
+    }
+    try {
+        const ref = doc(db, 'orgTimetables', organizationName.toLowerCase());
+        const snap = await getDoc(ref);
+        return snap.exists() ? (snap.data() as { data: TimetableData }).data : null;
+    } catch (error) {
+        console.error('Error getting timetable:', error);
+        return null;
+    }
 }
 
 // Query helper for students/faculty to raise issues (simple doc per user for now)
@@ -129,60 +165,58 @@ export async function raiseTimetableQuery(userUid: string, message: string) {
     await setDoc(ref, { message, createdAt: Date.now() }, { merge: true });
 }
 
-// Administrative data functions
-export async function setAdministrativeData(organizationName: string, data: AdministrativeData, userUid?: string) {
+// Administrative data functions (one admin per organization)
+export async function setAdministrativeData(organizationName: string, data: AdministrativeData) {
     if (!db) initializeFirebase();
-    
+    if (!auth?.currentUser) {
+        console.warn('User not authenticated, cannot save administrative data');
+        return;
+    }
     try {
-        console.log('Firestore: Saving administrative data for organization:', organizationName);
-        
-        // Use users collection with a specific document structure
-        if (!userUid) {
-            throw new Error('User UID is required for saving administrative data');
-        }
-        
-        const ref = doc(db, 'users', userUid);
-        
-        // Store administrative data as a field in the user document
-        const adminDataField = {
-            [`administrativeData_${organizationName.toLowerCase()}`]: {
-                departments: data.departments || [],
-                faculties: data.faculties || [],
-                students: data.students || [],
-                rooms: data.rooms || [],
-                lastUpdated: Date.now(),
-                organizationName: organizationName
-            }
+        const orgKey = sanitizeOrgKey(organizationName);
+        const ref = doc(db, 'organizations', orgKey);
+        const toSave: AdministrativeData = {
+            departments: data.departments || [],
+            faculties: data.faculties || [],
+            students: data.students || [],
+            rooms: data.rooms || [],
+            subjects: data.subjects || [],
+            sentiment: data.sentiment || '',
+            lastUpdated: Date.now()
         };
-        
-        console.log('Firestore: Data to save:', adminDataField);
-        await setDoc(ref, adminDataField, { merge: true });
-        console.log('Firestore: Administrative data saved successfully');
+        await setDoc(ref, { administrativeData: toSave }, { merge: true });
     } catch (error) {
         console.error('Firestore: Error saving administrative data:', error);
         throw error;
     }
 }
 
-export async function getAdministrativeData(organizationName?: string | null, userUid?: string) {
+export async function getAdministrativeData(organizationName?: string | null) {
     if (!db) initializeFirebase();
-    if (!organizationName || !userUid) return null;
-    
+    if (!organizationName) return null;
+    if (!auth?.currentUser) {
+        console.warn('User not authenticated, cannot get administrative data');
+        return null;
+    }
     try {
-        const ref = doc(db, 'users', userUid);
+        const orgKey = sanitizeOrgKey(organizationName);
+        const ref = doc(db, 'organizations', orgKey);
         const snap = await getDoc(ref);
-        
         if (snap.exists()) {
-            const userData = snap.data();
-            const adminDataField = userData[`administrativeData_${organizationName.toLowerCase()}`];
-            return adminDataField || null;
+            const data = snap.data() as { administrativeData?: AdministrativeData };
+            return data.administrativeData || null;
         }
-        
         return null;
     } catch (error) {
         console.error('Error getting administrative data:', error);
         return null;
     }
+}
+
+// Helper to fetch full admin context for TT generation
+export async function getAdminContextForOrg(organizationName?: string | null) {
+    const data = await getAdministrativeData(organizationName);
+    return data;
 }
 
 // Query submission function

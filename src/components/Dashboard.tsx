@@ -1,17 +1,15 @@
 // FIX: Create the Dashboard component and implement Gemini API call
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import jsPDF from 'jspdf';
 import { default as autoTable } from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { Sidebar } from './Sidebar';
-import { Chat } from './Chat';
 import { Timetable } from './Timetable';
 import { UserProfile, ChatMessage, TimetableData } from '../types';
 // FIX: Import the Icon component to resolve the 'Cannot find name' error.
 import { Icon } from './Icons';
 import { getFirebaseAuth } from '../firebase';
-import { getOrgTimetable, setOrgTimetable, raiseTimetableQuery } from '../firebase';
+import { getOrgTimetable, raiseTimetableQuery } from '../firebase';
 
 interface DashboardProps {
   user: UserProfile;
@@ -20,17 +18,8 @@ interface DashboardProps {
   onNavigate: (view: 'DASHBOARD' | 'PROFILE_EDIT' | 'GENERATE_TT' | 'ADMIN_INFO') => void;
 }
 
-const ai = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY!);
-
-
 export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, onNavigate }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { sender: 'model', text: isAdmin
-      ? `Hi ${user.name}! You can generate a course timetable for students. Use the chat to create a new timetable.`
-      : `Hi ${user.name}! You can view your timetable here once it is finalized by the administrator.` }
-  ]);
   const [timetableData, setTimetableData] = useState<TimetableData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'timetable'>('timetable');
   const timetableRef = useRef<HTMLDivElement>(null);
@@ -44,52 +33,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
     };
     loadOrg();
   }, [isAdmin, user.college]);
-
-  // Only admins can generate timetables
-  const handleSendMessage = async (message: string) => {
-    if (!isAdmin) return;
-    setIsLoading(true);
-    const userMessage: ChatMessage = { sender: 'user', text: message };
-    setMessages(prev => [...prev, userMessage]);
-
-    try {
-      const result = await ai.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        generationConfig: {
-          responseMimeType: "application/json"
-        }
-      }).generateContent({
-        contents: [{
-          role: "user",
-          parts: [{
-            text: `You are a university timetable generator. Create a JSON timetable based on the user's request. Take into account their preferences. Make the schedule realistic and avoid clashes.
-        USER_PREFERENCES: ${user.preferences || 'none'}
-        
-        PROMPT: ${message}`
-          }]
-        }]
-      });
-
-      const timetableJsonString = result.response.text();
-      try {
-        const parsedData: TimetableData = JSON.parse(timetableJsonString);
-        setTimetableData(parsedData);
-        setMessages(prev => [...prev, { sender: 'model', text: "Here is your generated timetable. Let me know if you'd like any adjustments." }]);
-        // Save to organization collection if admin has college set
-        if (user.college) {
-          await setOrgTimetable(user.college, parsedData);
-        }
-      } catch (e) {
-        console.error("Failed to parse timetable JSON:", e, "Received:", timetableJsonString);
-        setMessages(prev => [...prev, { sender: 'model', text: "I had trouble structuring the timetable. Could you try rephrasing your request?" }]);
-      }
-    } catch (error) {
-      console.error("Error generating timetable:", error);
-      setMessages(prev => [...prev, { sender: 'model', text: "Sorry, I encountered an error while generating the timetable. Please try again later." }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleDownloadPdf = () => {
     if (!timetableRef.current) return;
@@ -173,9 +116,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
             </div>
           </div>
 
-          {/* Main Timetable and Chat Layout */}
+          {/* Main Timetable Layout (read-only) */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6 flex-1 min-h-0">
-            <div className="lg:col-span-3 min-h-0 flex flex-col gap-4">
+            <div className="lg:col-span-4 min-h-0 flex flex-col gap-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-bold text-black">{isAdmin ? 'Current Timetable' : 'Your Timetable'}</h2>
                 <div className="flex space-x-2">
@@ -206,26 +149,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
               <div ref={timetableRef} className="flex-1 min-h-0">
                 <Timetable data={timetableData} />
               </div>
-            </div>
-            
-            {/* Compact Timetable Assistant */}
-            <div className="min-h-0 max-h-80 lg:max-h-96">
-              {isAdmin ? (
-                <div className="h-full">
-                  <Chat
-                    messages={messages}
-                    onSendMessage={handleSendMessage}
-                    isLoading={isLoading}
-                    title="Assistant"
-                    placeholder="Generate timetable..."
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-black/60 bg-gray-50 rounded-lg p-4">
-                  <Icon name="spinner" className="w-6 h-6 mb-2 animate-spin" />
-                  <span className="text-sm text-center">{timetableData ? 'Latest timetable loaded.' : 'Waiting for admin to finalize timetable.'}</span>
-                </div>
-              )}
             </div>
           </div>
         </div>

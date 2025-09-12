@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AdministrativeData, Department, FacultyMember, StudentInfo, RoomInfo, UserProfile } from '../types';
+import { AdministrativeData, Department, FacultyMember, StudentInfo, RoomInfo, UserProfile, Subject } from '../types';
 import { getAdministrativeData, setAdministrativeData } from '../firebase';
 import { Icon } from './Icons';
 import { Sidebar } from './Sidebar';
@@ -13,9 +13,9 @@ interface AdministrativeInfoProps {
 export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, onLogout, onNavigate }) => {
   const [adminData, setAdminData] = useState<AdministrativeData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'departments' | 'faculties' | 'students' | 'rooms' | 'admin-notes'>('admin-notes');
+  const [activeTab, setActiveTab] = useState<'sentiment' | 'departments' | 'faculties' | 'students' | 'subjects' | 'rooms'>('sentiment');
   const [isEditing, setIsEditing] = useState(false);
-  const [adminNotes, setAdminNotes] = useState('');
+  const [sentiment, setSentiment] = useState('');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -31,6 +31,7 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
           departments: [],
           faculties: [],
           students: [],
+          subjects: [],
           rooms: [],
           lastUpdated: Date.now()
         };
@@ -39,15 +40,17 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
         return;
       }
 
-      const data = await getAdministrativeData(user.college, user.uid);
+      const data = await getAdministrativeData(user.college);
       if (data) {
         setAdminData(data);
+        setSentiment(data.sentiment || '');
       } else {
         // Initialize with empty data
         const emptyData: AdministrativeData = {
           departments: [],
           faculties: [],
           students: [],
+          subjects: [],
           rooms: [],
           lastUpdated: Date.now()
         };
@@ -60,6 +63,7 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
         departments: [],
         faculties: [],
         students: [],
+        subjects: [],
         rooms: [],
         lastUpdated: Date.now()
       };
@@ -70,9 +74,9 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
   };
 
   const saveAdminData = async () => {
-    if (!user.college || !adminData) {
+    if (!user.college || user.college.trim() === '' || !adminData) {
       console.error('Cannot save: missing college or admin data', { college: user.college, hasAdminData: !!adminData });
-      alert('Error: Missing college information or administrative data');
+      alert('Error: Please set your college information in your profile before saving administrative data.');
       return;
     }
 
@@ -83,14 +87,15 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
       // Update the lastUpdated timestamp
       const dataToSave = {
         ...adminData,
+        sentiment,
         lastUpdated: Date.now()
       };
       
-      await setAdministrativeData(user.college, dataToSave, user.uid);
+      await setAdministrativeData(user.college, dataToSave as AdministrativeData);
       console.log('Administrative data saved successfully');
       
       // Update local state with the saved data
-      setAdminData(dataToSave);
+      setAdminData(dataToSave as AdministrativeData);
       setIsEditing(false);
       
       // Show success message
@@ -165,6 +170,22 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
     });
   };
 
+  const addSubject = () => {
+    if (!adminData) return;
+    const newSubject: Subject = {
+      code: '',
+      name: '',
+      year: 1,
+      branch: '',
+      discipline: '',
+      credits: 0
+    };
+    setAdminData({
+      ...adminData,
+      subjects: [...(adminData.subjects || []), newSubject]
+    });
+  };
+
   const updateItem = (type: keyof AdministrativeData, id: string, field: string, value: any) => {
     if (!adminData) return;
     const items = adminData[type] as any[];
@@ -204,6 +225,11 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
         </div>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
           <h1 className="text-xl sm:text-2xl font-bold text-black">Administrative Information</h1>
+          {!user.college || user.college.trim() === '' ? (
+            <div className="text-red-600 text-sm">
+              ⚠️ Please set your college in Profile first
+            </div>
+          ) : (
           <div className="flex space-x-2 flex-shrink-0">
             {isEditing ? (
               <>
@@ -229,10 +255,11 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
               </button>
             )}
           </div>
+          )}
         </div>
 
         <div className="flex space-x-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-          {(['admin-notes', 'departments', 'faculties', 'students', 'rooms'] as const).map((tab) => (
+          {(['sentiment', 'departments', 'faculties', 'students', 'subjects', 'rooms'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -242,38 +269,143 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
                   : 'bg-gray-200 text-black hover:bg-gray-300'
               }`}
             >
-              {tab === 'admin-notes' ? 'Admin Notes' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'sentiment' ? 'Sentiment' : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </div>
 
         <div className="flex-1 overflow-auto">
-          {activeTab === 'admin-notes' && (
+          {activeTab === 'sentiment' && (
             <div>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Administrative Data</h2>
+                <h2 className="text-lg font-semibold">Organization Sentiment</h2>
                 {isEditing && (
                   <button
-                    onClick={() => {
-                      // Save admin notes logic here
-                      setIsEditing(false);
-                    }}
+                    onClick={saveAdminData}
                     className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
                   >
-                    Save Notes
+                    Save
                   </button>
                 )}
               </div>
               <div className="bg-white border border-black rounded p-4">
-                <h3 className="text-lg font-bold mb-2 text-black">Admin Notes</h3>
+                <h3 className="text-lg font-bold mb-2 text-black">Guidance Sentiment</h3>
                 <textarea 
                   className="w-full border border-black p-2" 
                   rows={6} 
-                  value={adminNotes} 
-                  onChange={(e) => setAdminNotes(e.target.value)}
+                  value={sentiment} 
+                  onChange={(e) => setSentiment(e.target.value)}
                   disabled={!isEditing}
                 />
-                <div className="mt-2 text-sm text-black/70">(Administrative notes and data)</div>
+                <div className="mt-2 text-sm text-black/70">(High-level guidance that influences timetable generation: structure, constraints, preferences.)</div>
+              </div>
+            </div>
+          )}
+          {activeTab === 'subjects' && (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold">Subjects</h2>
+                {isEditing && (
+                  <button
+                    onClick={addSubject}
+                    className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+                  >
+                    Add Subject
+                  </button>
+                )}
+              </div>
+              <div className="space-y-4">
+                {(adminData?.subjects || []).map((subject, index) => (
+                  <div key={index} className="border rounded-lg p-4">
+                    {isEditing ? (
+                      <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
+                        <input
+                          type="text"
+                          value={subject.code}
+                          onChange={(e) => {
+                            const copy = [...(adminData?.subjects || [])];
+                            copy[index] = { ...subject, code: e.target.value };
+                            setAdminData({ ...(adminData as AdministrativeData), subjects: copy });
+                          }}
+                          placeholder="Code"
+                          className="w-full p-2 border rounded"
+                        />
+                        <input
+                          type="text"
+                          value={subject.name}
+                          onChange={(e) => {
+                            const copy = [...(adminData?.subjects || [])];
+                            copy[index] = { ...subject, name: e.target.value };
+                            setAdminData({ ...(adminData as AdministrativeData), subjects: copy });
+                          }}
+                          placeholder="Name"
+                          className="w-full p-2 border rounded"
+                        />
+                        <input
+                          type="number"
+                          value={subject.year}
+                          onChange={(e) => {
+                            const copy = [...(adminData?.subjects || [])];
+                            copy[index] = { ...subject, year: parseInt(e.target.value) };
+                            setAdminData({ ...(adminData as AdministrativeData), subjects: copy });
+                          }}
+                          placeholder="Year"
+                          className="w-full p-2 border rounded"
+                        />
+                        <input
+                          type="text"
+                          value={subject.branch}
+                          onChange={(e) => {
+                            const copy = [...(adminData?.subjects || [])];
+                            copy[index] = { ...subject, branch: e.target.value };
+                            setAdminData({ ...(adminData as AdministrativeData), subjects: copy });
+                          }}
+                          placeholder="Branch"
+                          className="w-full p-2 border rounded"
+                        />
+                        <input
+                          type="text"
+                          value={subject.discipline || ''}
+                          onChange={(e) => {
+                            const copy = [...(adminData?.subjects || [])];
+                            copy[index] = { ...subject, discipline: e.target.value };
+                            setAdminData({ ...(adminData as AdministrativeData), subjects: copy });
+                          }}
+                          placeholder="Discipline"
+                          className="w-full p-2 border rounded"
+                        />
+                        <input
+                          type="number"
+                          value={subject.credits || 0}
+                          onChange={(e) => {
+                            const copy = [...(adminData?.subjects || [])];
+                            copy[index] = { ...subject, credits: parseInt(e.target.value) };
+                            setAdminData({ ...(adminData as AdministrativeData), subjects: copy });
+                          }}
+                          placeholder="Credits"
+                          className="w-full p-2 border rounded"
+                        />
+                        <div className="md:col-span-6">
+                          <button
+                            onClick={() => {
+                              const copy = [...(adminData?.subjects || [])];
+                              copy.splice(index, 1);
+                              setAdminData({ ...(adminData as AdministrativeData), subjects: copy });
+                            }}
+                            className="mt-2 px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <h3 className="font-semibold">{subject.code} - {subject.name}</h3>
+                        <p className="text-gray-600">Year {subject.year} • {subject.branch}{subject.discipline ? ` • ${subject.discipline}` : ''}{typeof subject.credits === 'number' ? ` • ${subject.credits} credits` : ''}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}

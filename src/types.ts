@@ -110,5 +110,17 @@ export interface AdministrativeData {
   faculties: FacultyMember[];
   students: StudentInfo[];
   rooms: RoomInfo[];
+  subjects?: Subject[];
+  sentiment?: string;
   lastUpdated: number;
 } 
+
+// Subjects offered per year/branch/discipline used for TT generation
+export interface Subject {
+  code: string;
+  name: string;
+  year: number;
+  branch: string;
+  discipline?: string;
+  credits?: number;
+}
