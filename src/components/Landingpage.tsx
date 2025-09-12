@@ -106,12 +106,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
       <main className="p-5 w-full box-border flex-1 pt-28">
         {/* Hero Section */}
         <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4 relative">
-          {/* Hero Image with slant and floating animation */}
-          <div className="absolute top-0 right-0 w-64 h-64 md:w-80 md:h-80 opacity-90">
+          {/* Hero Image with floating animation */}
+          <div className="absolute top-0 left-0 w-64 h-64 md:w-80 md:h-80 opacity-90">
             <img 
               src="/images/hero.png" 
               alt="Academic success" 
-              className="w-full h-full object-contain transform rotate-12 animate-float-slow hero-image"
+              className="w-full h-full object-contain animate-float-slow hero-image"
               style={{ 
                 filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.1))',
                 animationDelay: '0s'

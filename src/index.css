@@ -14,28 +14,46 @@ body {
 /* Floating Animation Keyframes */
 @keyframes float-slow {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-8px) translateX(2px);
   }
   50% {
-    transform: translateY(-20px);
+    transform: translateY(-15px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-8px) translateX(-2px);
   }
 }
 
 @keyframes float-medium {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
   }
-  50% {
-    transform: translateY(-15px);
+  33% {
+    transform: translateY(-10px) translateX(1px);
+  }
+  66% {
+    transform: translateY(-12px) translateX(-1px);
   }
 }
 
 @keyframes float-fast {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
   }
-  50% {
-    transform: translateY(-10px);
+  20% {
+    transform: translateY(-6px) translateX(1px);
+  }
+  40% {
+    transform: translateY(-10px) translateX(0px);
+  }
+  60% {
+    transform: translateY(-8px) translateX(-1px);
+  }
+  80% {
+    transform: translateY(-12px) translateX(0px);
   }
 }
 
@@ -56,14 +74,25 @@ body {
 /* Floating Animation Classes */
 .animate-float-slow {
   animation: float-slow 6s ease-in-out infinite;
+  animation-fill-mode: both;
 }
 
 .animate-float-medium {
   animation: float-medium 4s ease-in-out infinite;
+  animation-fill-mode: both;
 }
 
 .animate-float-fast {
   animation: float-fast 3s ease-in-out infinite;
+  animation-fill-mode: both;
+}
+
+/* Hover effects for floating images */
+.hero-image:hover,
+.about-image:hover {
+  animation-play-state: paused;
+  transform: translateY(-5px) scale(1.05);
+  transition: transform 0.3s ease;
 }
 
 /* Responsive adjustments for mobile */
@@ -71,6 +100,11 @@ body {
   .animate-float-slow,
   .animate-float-medium,
   .animate-float-fast {
+    animation-duration: 8s;
+  }
+  
+  .hero-image,
+  .about-image {
     animation-duration: 8s;
   }
 }
