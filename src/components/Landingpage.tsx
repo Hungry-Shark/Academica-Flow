@@ -105,13 +105,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
       {/* Main Content */}
       <main className="p-5 w-full box-border flex-1 pt-28">
         {/* Hero Section */}
-        <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
-          <h1 className="text-6xl font-bold mb-4">Welcome to Academica Flow</h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl">
+        <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4 relative">
+          {/* Hero Image with slant and floating animation */}
+          <div className="absolute top-0 right-0 w-64 h-64 md:w-80 md:h-80 opacity-90">
+            <img 
+              src="/images/hero.png" 
+              alt="Academic success" 
+              className="w-full h-full object-contain transform rotate-12 animate-float-slow hero-image"
+              style={{ 
+                filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.1))',
+                animationDelay: '0s'
+              }}
+            />
+          </div>
+          
+          <h1 className="text-6xl font-bold mb-4 relative z-10">Welcome to Academica Flow</h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl relative z-10">
             Streamline your academic journey with intelligent timetable management. 
             Built for students, faculty, and administrators.
           </p>
-
 
           {/* Features Preview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl">
@@ -140,31 +152,84 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
         </div>
 
         <section id="about" className="py-20 px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-8">About Academica Flow</h2>
-            <p className="text-lg text-gray-600 mb-8">
-              Academica Flow revolutionizes academic scheduling by providing a comprehensive platform 
-              that serves the unique needs of educational institutions. Our intelligent system ensures 
-              optimal resource utilization while maintaining flexibility for all stakeholders.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
-              <div className="text-left md:text-left text-center">
-                <h3 className="text-2xl font-semibold mb-4">For Students</h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li> View personalized timetables</li>
-                  <li> Set preferences for optimal scheduling</li>
-                  <li> Access course information and updates</li>
-                  <li> Real-time notifications for changes</li>
-                </ul>
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-4xl font-bold mb-12 text-center">About Academica Flow</h2>
+            
+            {/* Problem Section */}
+            <div className="mb-16 relative">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div className="order-2 lg:order-1">
+                  <h3 className="text-3xl font-bold mb-6 text-gray-800">The Timetable Creation Struggle</h3>
+                  <div className="space-y-4 text-lg text-gray-600">
+                    <p>
+                      Creating academic timetables is a nightmare that every educational institution faces. 
+                      Administrators spend countless hours juggling:
+                    </p>
+                    <ul className="list-disc list-inside space-y-2 ml-4">
+                      <li>Faculty availability and preferences</li>
+                      <li>Room capacity and equipment requirements</li>
+                      <li>Student batch sizes and course conflicts</li>
+                      <li>Resource allocation and scheduling constraints</li>
+                      <li>Last-minute changes and emergency adjustments</li>
+                    </ul>
+                    <p>
+                      This manual process is error-prone, time-consuming, and often results in conflicts 
+                      that frustrate both students and faculty.
+                    </p>
+                  </div>
+                </div>
+                <div className="order-1 lg:order-2 flex justify-center">
+                  <div className="w-80 h-80 relative">
+                    <img 
+                      src="/images/about1.png" 
+                      alt="Overwhelmed administrator" 
+                      className="w-full h-full object-contain transform -rotate-6 animate-float-medium about-image"
+                      style={{ 
+                        filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.15))',
+                        animationDelay: '1s'
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="text-left md:text-left text-center">
-                <h3 className="text-2xl font-semibold mb-4">For Faculty & Admin</h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li> Generate and manage timetables</li>
-                  <li> Allocate resources efficiently</li>
-                  <li> Handle scheduling conflicts automatically</li>
-                  <li> Comprehensive reporting and analytics</li>
-                </ul>
+            </div>
+
+            {/* Solution Section */}
+            <div className="relative">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div className="flex justify-center">
+                  <div className="w-80 h-80 relative">
+                    <img 
+                      src="/images/about2.png" 
+                      alt="AI-powered solution" 
+                      className="w-full h-full object-contain transform rotate-6 animate-float-slow about-image"
+                      style={{ 
+                        filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.15))',
+                        animationDelay: '2s'
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-3xl font-bold mb-6 text-gray-800">Our AI-Powered Solution</h3>
+                  <div className="space-y-4 text-lg text-gray-600">
+                    <p>
+                      Academica Flow revolutionizes timetable creation with intelligent automation that:
+                    </p>
+                    <ul className="list-disc list-inside space-y-2 ml-4">
+                      <li>Instantly generates conflict-free schedules</li>
+                      <li>Considers all constraints and preferences automatically</li>
+                      <li>Adapts to real-time changes and updates</li>
+                      <li>Provides role-based interfaces for different users</li>
+                      <li>Offers comprehensive reporting and analytics</li>
+                    </ul>
+                    <p>
+                      Our intelligent system ensures optimal resource utilization while maintaining 
+                      flexibility for all stakeholders, transforming a week-long nightmare into 
+                      a matter of minutes.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

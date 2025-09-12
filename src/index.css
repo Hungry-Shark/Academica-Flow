@@ -10,3 +10,67 @@ body {
   font-family: 'Beyno', Arial, sans-serif;
   letter-spacing: 0.1em;
 }
+
+/* Floating Animation Keyframes */
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes float-medium {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes float-fast {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Image background removal and enhancement */
+.hero-image, .about-image {
+  mix-blend-mode: multiply;
+  filter: contrast(1.1) brightness(1.05);
+}
+
+.hero-image {
+  background: transparent;
+}
+
+.about-image {
+  background: transparent;
+}
+
+/* Floating Animation Classes */
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.animate-float-medium {
+  animation: float-medium 4s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: float-fast 3s ease-in-out infinite;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+  .animate-float-slow,
+  .animate-float-medium,
+  .animate-float-fast {
+    animation-duration: 8s;
+  }
+}
