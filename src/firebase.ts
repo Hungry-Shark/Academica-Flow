@@ -1,8 +1,8 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { initializeFirestore, connectFirestoreEmulator, doc, setDoc, getDoc } from 'firebase/firestore';
+import { initializeFirestore, connectFirestoreEmulator, doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { connectAuthEmulator } from 'firebase/auth';
-import { UserProfile, AdminProfile, AdminSettings, TimetableData, AdministrativeData } from './types';
+import { UserProfile, AdminProfile, AdminSettings, TimetableData, AdministrativeData, Organization } from './types';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -65,11 +65,24 @@ function sanitizeOrgKey(organizationName: string) {
         .replace(/[^a-z0-9_-]+/g, '-');
 }
 
+// Generate a unique 6-digit organization token
+function generateOrgToken(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Check if a token already exists (now checking within user documents)
+async function isTokenUnique(token: string): Promise<boolean> {
+    if (!db) initializeFirebase();
+    const q = query(collection(db, 'users'), where('organization.token', '==', token));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.empty;
+}
+
 // User data functions
 export async function createUserProfile(userId: string, userData: UserProfile) {
     if (!db) initializeFirebase();
     const userRef = doc(db, 'users', userId);
-    await setDoc(userRef, userData, { merge: true });
+    await setDoc(userRef, { ...userData, profileCompleted: true }, { merge: true });
 }
 
 export async function getUserProfile(userId: string) {
@@ -82,6 +95,13 @@ export async function getUserProfile(userId: string) {
         return { ...userData, uid: userId };
     }
     return null;
+}
+
+export async function checkUserProfileExists(userId: string): Promise<boolean> {
+    if (!db) initializeFirebase();
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    return userSnap.exists() && userSnap.data()?.profileCompleted === true;
 }
 
 // Admin data
@@ -125,36 +145,109 @@ export async function getUserTimetable(userUid: string) {
     return snap.exists() ? (snap.data() as { data: TimetableData }).data : null;
 }
 
-// Organization-level timetable keyed by college/school name
-export async function setOrgTimetable(organizationName: string, timetable: TimetableData) {
+// Organization-level timetable functions
+export async function setOrgTimetable(organizationToken: string, timetable: TimetableData, isPublished: boolean = false) {
     if (!db) initializeFirebase();
     if (!auth?.currentUser) {
         console.warn('User not authenticated, cannot save timetable');
         return;
     }
     try {
-        const ref = doc(db, 'orgTimetables', organizationName.toLowerCase());
-        await setDoc(ref, { data: timetable, updatedAt: Date.now() }, { merge: true });
+        const organization = await getOrganizationByToken(organizationToken);
+        if (!organization) {
+            throw new Error('Organization not found');
+        }
+        
+        if (organization.adminId !== auth.currentUser.uid) {
+            throw new Error('Only organization admin can update timetable');
+        }
+        
+        const ref = doc(db, 'organizations', organization.id);
+        await setDoc(ref, { 
+            timetableData: timetable, 
+            isPublished: isPublished,
+            timetableUpdatedAt: Date.now() 
+        }, { merge: true });
     } catch (error) {
         console.error('Error saving timetable:', error);
         throw error;
     }
 }
 
-export async function getOrgTimetable(organizationName?: string | null) {
+export async function getOrgTimetable(organizationToken?: string | null) {
     if (!db) initializeFirebase();
-    if (!organizationName) return null;
+    if (!organizationToken) return null;
     if (!auth?.currentUser) {
         console.warn('User not authenticated, cannot get timetable');
         return null;
     }
     try {
-        const ref = doc(db, 'orgTimetables', organizationName.toLowerCase());
-        const snap = await getDoc(ref);
-        return snap.exists() ? (snap.data() as { data: TimetableData }).data : null;
+        const organization = await getOrganizationByToken(organizationToken);
+        if (!organization) {
+            return null;
+        }
+        
+        return organization.timetableData || null;
     } catch (error) {
         console.error('Error getting timetable:', error);
         return null;
+    }
+}
+
+export async function publishTimetable(organizationToken: string) {
+    if (!db) initializeFirebase();
+    if (!auth?.currentUser) {
+        throw new Error('User not authenticated');
+    }
+    
+    try {
+        const organization = await getOrganizationByToken(organizationToken);
+        if (!organization) {
+            throw new Error('Organization not found');
+        }
+        
+        if (organization.adminId !== auth.currentUser.uid) {
+            throw new Error('Only organization admin can publish timetable');
+        }
+        
+        // Update publish status in user's organization
+        const userRef = doc(db, 'users', auth.currentUser.uid);
+        await setDoc(userRef, { 
+            'organization.isPublished': true,
+            'organization.publishedAt': Date.now() 
+        }, { merge: true });
+    } catch (error) {
+        console.error('Error publishing timetable:', error);
+        throw error;
+    }
+}
+
+export async function saveOrgTimetable(organizationToken: string, timetableData: TimetableData) {
+    if (!db) initializeFirebase();
+    if (!auth?.currentUser) {
+        throw new Error('User not authenticated');
+    }
+    
+    try {
+        const organization = await getOrganizationByToken(organizationToken);
+        if (!organization) {
+            throw new Error('Organization not found');
+        }
+        
+        if (organization.adminId !== auth.currentUser.uid) {
+            throw new Error('Only organization admin can save timetable');
+        }
+        
+        // Update timetable data in user's organization
+        const userRef = doc(db, 'users', auth.currentUser.uid);
+        await setDoc(userRef, { 
+            'organization.timetableData': timetableData,
+            'organization.lastUpdated': Date.now(),
+            'organization.isPublished': false // Save as draft initially
+        }, { merge: true });
+    } catch (error) {
+        console.error('Error saving timetable:', error);
+        throw error;
     }
 }
 
@@ -165,16 +258,112 @@ export async function raiseTimetableQuery(userUid: string, message: string) {
     await setDoc(ref, { message, createdAt: Date.now() }, { merge: true });
 }
 
-// Administrative data functions (one admin per organization)
-export async function setAdministrativeData(organizationName: string, data: AdministrativeData) {
+// Organization management functions
+export async function createOrganization(adminId: string, organizationName: string): Promise<string> {
+    if (!db) initializeFirebase();
+    if (!auth?.currentUser) {
+        throw new Error('User not authenticated');
+    }
+    
+    try {
+        // Check if admin already has an organization
+        const userRef = doc(db, 'users', adminId);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists() && userSnap.data()?.organization) {
+            // Return existing token instead of creating new one
+            return userSnap.data().organization.token;
+        }
+        
+        // Generate unique token
+        let token: string;
+        let isUnique = false;
+        let attempts = 0;
+        
+        do {
+            token = generateOrgToken();
+            isUnique = await isTokenUnique(token);
+            attempts++;
+        } while (!isUnique && attempts < 10);
+        
+        if (!isUnique) {
+            throw new Error('Failed to generate unique token');
+        }
+        
+        const organization: Organization = {
+            id: sanitizeOrgKey(organizationName),
+            name: organizationName,
+            token: token,
+            adminId: adminId,
+            createdAt: Date.now(),
+            isPublished: false
+        };
+        
+        // Store organization inside user document
+        await setDoc(userRef, { 
+            organization: organization 
+        }, { merge: true });
+        
+        return token;
+    } catch (error) {
+        console.error('Error creating organization:', error);
+        throw error;
+    }
+}
+
+export async function getOrganizationByToken(token: string): Promise<Organization | null> {
+    if (!db) initializeFirebase();
+    try {
+        const q = query(collection(db, 'users'), where('organization.token', '==', token));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            return null;
+        }
+        
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        return userData.organization as Organization;
+    } catch (error) {
+        console.error('Error getting organization by token:', error);
+        return null;
+    }
+}
+
+export async function getOrganizationByAdminId(adminId: string): Promise<Organization | null> {
+    if (!db) initializeFirebase();
+    try {
+        const userRef = doc(db, 'users', adminId);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists() || !userSnap.data()?.organization) {
+            return null;
+        }
+        
+        return userSnap.data().organization as Organization;
+    } catch (error) {
+        console.error('Error getting organization by admin ID:', error);
+        return null;
+    }
+}
+
+// Administrative data functions (now organization-based)
+export async function setAdministrativeData(organizationToken: string, data: AdministrativeData) {
     if (!db) initializeFirebase();
     if (!auth?.currentUser) {
         console.warn('User not authenticated, cannot save administrative data');
         return;
     }
     try {
-        const orgKey = sanitizeOrgKey(organizationName);
-        const ref = doc(db, 'organizations', orgKey);
+        const organization = await getOrganizationByToken(organizationToken);
+        if (!organization) {
+            throw new Error('Organization not found');
+        }
+        
+        if (organization.adminId !== auth.currentUser.uid) {
+            throw new Error('Only organization admin can update administrative data');
+        }
+        
         const toSave: AdministrativeData = {
             departments: data.departments || [],
             faculties: data.faculties || [],
@@ -184,29 +373,32 @@ export async function setAdministrativeData(organizationName: string, data: Admi
             sentiment: data.sentiment || '',
             lastUpdated: Date.now()
         };
-        await setDoc(ref, { administrativeData: toSave }, { merge: true });
+        
+        // Update administrative data in user's organization
+        const userRef = doc(db, 'users', auth.currentUser.uid);
+        await setDoc(userRef, { 
+            'organization.administrativeData': toSave 
+        }, { merge: true });
     } catch (error) {
         console.error('Firestore: Error saving administrative data:', error);
         throw error;
     }
 }
 
-export async function getAdministrativeData(organizationName?: string | null) {
+export async function getAdministrativeData(organizationToken?: string | null) {
     if (!db) initializeFirebase();
-    if (!organizationName) return null;
+    if (!organizationToken) return null;
     if (!auth?.currentUser) {
         console.warn('User not authenticated, cannot get administrative data');
         return null;
     }
     try {
-        const orgKey = sanitizeOrgKey(organizationName);
-        const ref = doc(db, 'organizations', orgKey);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-            const data = snap.data() as { administrativeData?: AdministrativeData };
-            return data.administrativeData || null;
+        const organization = await getOrganizationByToken(organizationToken);
+        if (!organization) {
+            return null;
         }
-        return null;
+        
+        return organization.administrativeData || null;
     } catch (error) {
         console.error('Error getting administrative data:', error);
         return null;
@@ -214,8 +406,8 @@ export async function getAdministrativeData(organizationName?: string | null) {
 }
 
 // Helper to fetch full admin context for TT generation
-export async function getAdminContextForOrg(organizationName?: string | null) {
-    const data = await getAdministrativeData(organizationName);
+export async function getAdminContextForOrg(organizationToken?: string | null) {
+    const data = await getAdministrativeData(organizationToken);
     return data;
 }
 

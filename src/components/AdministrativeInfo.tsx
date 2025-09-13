@@ -20,13 +20,13 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
 
   useEffect(() => {
     loadAdminData();
-  }, [user.college]);
+  }, [user.organizationToken]);
 
   const loadAdminData = async () => {
     setLoading(true);
     try {
-      if (!user.college) {
-        // Initialize with empty data if no college
+      if (!user.organizationToken) {
+        // Initialize with empty data if no organization token
         const emptyData: AdministrativeData = {
           departments: [],
           faculties: [],
@@ -40,7 +40,7 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
         return;
       }
 
-      const data = await getAdministrativeData(user.college);
+      const data = await getAdministrativeData(user.organizationToken);
       if (data) {
         setAdminData(data);
         setSentiment(data.sentiment || '');
@@ -74,14 +74,14 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
   };
 
   const saveAdminData = async () => {
-    if (!user.college || user.college.trim() === '' || !adminData) {
-      console.error('Cannot save: missing college or admin data', { college: user.college, hasAdminData: !!adminData });
-      alert('Error: Please set your college information in your profile before saving administrative data.');
+    if (!user.organizationToken || user.organizationToken.trim() === '' || !adminData) {
+      console.error('Cannot save: missing organization token or admin data', { organizationToken: user.organizationToken, hasAdminData: !!adminData });
+      alert('Error: Please set your organization token in your profile before saving administrative data.');
       return;
     }
 
     try {
-      console.log('Saving administrative data for college:', user.college);
+      console.log('Saving administrative data for organization token:', user.organizationToken);
       console.log('Data to save:', adminData);
       
       // Update the lastUpdated timestamp
@@ -91,7 +91,7 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
         lastUpdated: Date.now()
       };
       
-      await setAdministrativeData(user.college, dataToSave as AdministrativeData);
+      await setAdministrativeData(user.organizationToken, dataToSave as AdministrativeData);
       console.log('Administrative data saved successfully');
       
       // Update local state with the saved data
@@ -225,9 +225,9 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
         </div>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
           <h1 className="text-xl sm:text-2xl font-bold text-black">Administrative Information</h1>
-          {!user.college || user.college.trim() === '' ? (
+          {!user.organizationToken || user.organizationToken.trim() === '' ? (
             <div className="text-red-600 text-sm">
-              ⚠️ Please set your college in Profile first
+              ⚠️ Please set your organization token in Profile first
             </div>
           ) : (
           <div className="flex space-x-2 flex-shrink-0">

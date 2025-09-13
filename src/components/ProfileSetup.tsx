@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
+import { createOrganization, getOrganizationByToken } from '../firebase';
+import { Icon } from './Icons';
 
 interface ProfileSetupProps {
   user: UserProfile;
   onSave: (updates: Partial<UserProfile>) => void;
+  onNavigate?: (view: string) => void;
 }
 
-export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave }) => {
+export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, onNavigate }) => {
   const [name, setName] = useState(user.name || '');
-  const [preferences, setPreferences] = useState(user.preferences || '');
   const [role, setRole] = useState<UserProfile['role']>(user.role || 'student');
+  const [college, setCollege] = useState(user.college || '');
+  const [organizationToken, setOrganizationToken] = useState(user.organizationToken || '');
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       setError('Please enter your name.');
       return;
@@ -21,14 +28,72 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave }) => {
       setError('Please select a role.');
       return;
     }
-    setError(null);
-    onSave({ name: name.trim(), preferences, role });
+    if (!college.trim()) {
+      setError('Please enter your school/college name.');
+      return;
+    }
+    
+    if (role === 'admin') {
+      // Admin creates organization and gets token
+      try {
+        setIsCreatingOrg(true);
+        const token = await createOrganization(user.uid, college.trim());
+        setGeneratedToken(token);
+        setError(null);
+        onSave({ 
+          name: name.trim(), 
+          preferences: '', 
+          role, 
+          college: college.trim(),
+          organizationToken: token
+        });
+      } catch (error) {
+        console.error('Error creating organization:', error);
+        setError('Failed to create organization. Please try again.');
+      } finally {
+        setIsCreatingOrg(false);
+      }
+    } else {
+      // Student/Faculty joins with token
+      if (!organizationToken.trim()) {
+        setError('Please enter the organization token provided by your admin.');
+        return;
+      }
+      
+      try {
+        const organization = await getOrganizationByToken(organizationToken.trim());
+        if (!organization) {
+          setError('Invalid organization token. Please check with your admin.');
+          return;
+        }
+        
+        setError(null);
+        onSave({ 
+          name: name.trim(), 
+          preferences: '', 
+          role, 
+          college: organization.name,
+          organizationToken: organizationToken.trim()
+        });
+      } catch (error) {
+        console.error('Error validating token:', error);
+        setError('Failed to validate organization token. Please try again.');
+      }
+    }
   };
 
   return (
-    <div className="min-h-screen bg-white text-black flex items-center justify-center p-4 sm:p-8">
-      <div className="max-w-md w-full mx-auto">
-        <h1 className="text-2xl font-bold mb-6 text-center sm:text-left">Complete your profile</h1>
+    <div className="min-h-screen bg-white text-black flex flex-col p-4 sm:p-8">
+      {/* Hamburger menu button for mobile */}
+      <div className="lg:hidden mb-4 self-end">
+        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-md text-black bg-white border border-black">
+          <Icon name="menu" className="w-6 h-6" />
+        </button>
+      </div>
+      
+      <div className="flex-1 flex items-center justify-center">
+        <div className="max-w-md w-full mx-auto">
+          <h1 className="text-2xl font-bold mb-6 text-center sm:text-left">Complete your profile</h1>
         <div className="space-y-4">
           <div>
             <label className="block text-sm mb-1">Email</label>
@@ -52,11 +117,46 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave }) => {
             </div>
           </div>
           <div>
-            <label className="block text-sm mb-1">Preferences</label>
-            <textarea value={preferences} onChange={(e) => setPreferences(e.target.value)} className="w-full p-3 bg-white border border-black rounded" rows={4} />
+            <label className="block text-sm mb-1">School/College Name</label>
+            <input 
+              value={college} 
+              onChange={(e) => setCollege(e.target.value)} 
+              className="w-full p-3 bg-white border border-black rounded" 
+              placeholder="Enter your institution name"
+            />
           </div>
+          {role !== 'admin' && (
+            <div>
+              <label className="block text-sm mb-1">Organization Token</label>
+              <input 
+                value={organizationToken} 
+                onChange={(e) => setOrganizationToken(e.target.value)} 
+                className="w-full p-3 bg-white border border-black rounded" 
+                placeholder="Enter 6-digit token from your admin"
+                maxLength={6}
+              />
+              <p className="text-xs text-gray-600 mt-1">Ask your admin for the organization token</p>
+            </div>
+          )}
+          {role === 'admin' && generatedToken && (
+            <div className="bg-green-50 border border-green-200 rounded p-4">
+              <h3 className="font-semibold text-green-800 mb-2">Organization Created Successfully!</h3>
+              <p className="text-sm text-green-700 mb-2">Your organization token is:</p>
+              <div className="bg-white border border-green-300 rounded p-2 font-mono text-lg text-center">
+                {generatedToken}
+              </div>
+              <p className="text-xs text-green-600 mt-2">Share this token with students and faculty to join your organization.</p>
+            </div>
+          )}
           {error && <div className="text-red-600 text-sm">{error}</div>}
-          <button onClick={handleSave} className="w-full py-3 bg-black text-white rounded">Save</button>
+          <button 
+            onClick={handleSave} 
+            disabled={isCreatingOrg}
+            className="w-full py-3 bg-black text-white rounded disabled:bg-gray-400"
+          >
+            {isCreatingOrg ? 'Creating Organization...' : 'Save'}
+          </button>
+        </div>
         </div>
       </div>
     </div>

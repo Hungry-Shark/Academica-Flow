@@ -1,6 +1,6 @@
 // FIX: Create the main App component
 import React, { useState, useEffect } from 'react';
-import { getFirebaseAuth, createUserProfile, getUserProfile } from './firebase';
+import { getFirebaseAuth, createUserProfile, getUserProfile, checkUserProfileExists } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { LandingPage } from './components/Landingpage';
 import { Login } from './components/Login';
@@ -24,24 +24,25 @@ const App: React.FC = () => {
     const auth = getFirebaseAuth();
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        const userProfile = await getUserProfile(firebaseUser.uid);
-        if (userProfile) {
-          setUser(userProfile);
-          // Check if user has a pending query from before login
-          const pendingQuery = localStorage.getItem('pendingQuery');
-          if (pendingQuery) {
-            // User returned from login with a pending query, show landing page with form
-            setAppView('LANDING');
-          } else {
-            // Auto-route authenticated users to their appropriate dashboard
-            if (!userProfile.profileComplete) {
-              setAppView('PROFILE_SETUP');
+        // Check if user has completed profile setup
+        const hasCompletedProfile = await checkUserProfileExists(firebaseUser.uid);
+        
+        if (hasCompletedProfile) {
+          // User has completed profile, load their data
+          const userProfile = await getUserProfile(firebaseUser.uid);
+          if (userProfile) {
+            setUser(userProfile);
+            // Check if user has a pending query from before login
+            const pendingQuery = localStorage.getItem('pendingQuery');
+            if (pendingQuery) {
+              setAppView('LANDING');
             } else {
+              // Route to appropriate dashboard based on role
               setAppView(userProfile.role === 'admin' ? 'ADMIN' : 'DASHBOARD');
             }
           }
         } else {
-          // New user, create default profile and route to setup
+          // User needs to complete profile setup
           const newUser: UserProfile = {
             uid: firebaseUser.uid,
             email: firebaseUser.email || '',
@@ -49,17 +50,15 @@ const App: React.FC = () => {
             role: 'student',
             preferences: '',
             profileComplete: false,
+            profileCompleted: false,
           };
-          await createUserProfile(firebaseUser.uid, newUser);
           setUser(newUser);
           setAppView('PROFILE_SETUP');
         }
       } else {
         setUser(null);
-        // Only return to LANDING when explicitly signed out, not on refresh
         const savedView = localStorage.getItem('lastAppView');
         if (savedView && savedView !== 'LANDING') {
-          // User was on a protected page, redirect to login
           setAppView('LOGIN');
         } else {
           setAppView('LANDING');
@@ -74,12 +73,14 @@ const App: React.FC = () => {
     const auth = getFirebaseAuth();
     // If already signed in, decide destination immediately
     if (auth.currentUser) {
-      const existingProfile = auth.currentUser ? await getUserProfile(auth.currentUser.uid) : null;
-      if (existingProfile && existingProfile.profileComplete) {
-        setUser(existingProfile);
-        setAppView(existingProfile.role === 'admin' ? 'ADMIN' : 'DASHBOARD');
+      const hasCompletedProfile = await checkUserProfileExists(auth.currentUser.uid);
+      if (hasCompletedProfile) {
+        const existingProfile = await getUserProfile(auth.currentUser.uid);
+        if (existingProfile) {
+          setUser(existingProfile);
+          setAppView(existingProfile.role === 'admin' ? 'ADMIN' : 'DASHBOARD');
+        }
       } else {
-        // Either no profile or incomplete => setup
         setAppView('PROFILE_SETUP');
       }
     } else {
@@ -90,7 +91,7 @@ const App: React.FC = () => {
   const handleProfileSave = async (profileUpdates: Partial<UserProfile>) => {
     const auth = getFirebaseAuth();
     if (user && auth.currentUser) {
-      const updatedUser = { ...user, ...profileUpdates, profileComplete: true };
+      const updatedUser = { ...user, ...profileUpdates, profileComplete: true, profileCompleted: true };
       await createUserProfile(auth.currentUser.uid, updatedUser);
       setUser(updatedUser);
       setAppView(updatedUser.role === 'admin' ? 'ADMIN' : 'DASHBOARD');

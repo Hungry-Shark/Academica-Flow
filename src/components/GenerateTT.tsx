@@ -8,7 +8,7 @@ import { Chat } from './Chat';
 import { Timetable } from './Timetable';
 import { UserProfile, ChatMessage, TimetableData, AdministrativeData, TimetableSlot } from '../types';
 import { Icon } from './Icons';
-import { setOrgTimetable, getAdministrativeData, getOrgTimetable } from '../firebase';
+import { setOrgTimetable, getAdministrativeData, getOrgTimetable, getAdminContextForOrg } from '../firebase';
 
 interface GenerateTTProps {
   user: UserProfile;
@@ -92,11 +92,11 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
   // Load admin context and existing timetable
   useEffect(() => {
     const loadContext = async () => {
-      if (!user.college) return;
+      if (!user.organizationToken) return;
       try {
         const [adminData, existingTT] = await Promise.all([
-          getAdministrativeData(user.college),
-          getOrgTimetable(user.college)
+          getAdminContextForOrg(user.organizationToken),
+          getOrgTimetable(user.organizationToken)
         ]);
         setAdminContext(adminData);
         setExistingOrgTT(existingTT);
@@ -108,7 +108,7 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
       }
     };
     loadContext();
-  }, [user.college]);
+  }, [user.organizationToken]);
 
   const handleSendMessage = async (message: string) => {
     setIsLoading(true);
@@ -249,12 +249,12 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
   };
 
   const handlePublish = async () => {
-    if (!timetableData || !user.college) {
-      alert('Please generate a timetable and ensure your college is set in your profile.');
+    if (!timetableData || !user.organizationToken) {
+      alert('Please generate a timetable and ensure your organization token is set in your profile.');
       return;
     }
-    await setOrgTimetable(user.college, timetableData);
-    alert('Timetable published successfully!');
+    await setOrgTimetable(user.organizationToken, timetableData, false);
+    alert('Timetable saved successfully! Go to Dashboard to publish it for students and faculty.');
   };
 
   const handleDownloadPdf = () => {

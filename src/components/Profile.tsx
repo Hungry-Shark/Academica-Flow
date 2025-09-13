@@ -13,15 +13,17 @@ interface ProfileProps {
 export const Profile: React.FC<ProfileProps> = ({ user, onLogout, onNavigate }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [name, setName] = useState(user.name);
-  const [preferences, setPreferences] = useState(user.preferences || '');
   const [college, setCollege] = useState(user.college || '');
+  const [phone, setPhone] = useState('');
+  const [department, setDepartment] = useState('');
+  const [year, setYear] = useState('');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     const auth = getFirebaseAuth();
     if (!auth.currentUser) return;
     setSaving(true);
-    const updated: UserProfile = { ...user, name, preferences, college };
+    const updated: UserProfile = { ...user, name, college };
     await createUserProfile(auth.currentUser.uid, updated);
     setSaving(false);
     onNavigate('DASHBOARD');
@@ -37,11 +39,21 @@ export const Profile: React.FC<ProfileProps> = ({ user, onLogout, onNavigate }) 
         onNavigate={onNavigate as any}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="lg:hidden">
-          <button onClick={() => setSidebarOpen(true)} className="p-4">
-            <Icon name="menu" className="h-6 w-6 text-gray-500" />
-          </button>
-        </div>
+        {/* Landing page style hamburger menu */}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-6 right-6 z-[1001] cursor-pointer w-8 h-6 flex flex-col justify-between lg:hidden"
+        >
+          <span className={`block w-full h-0.5 transition-all duration-300 ease-in-out origin-center ${
+            isSidebarOpen ? 'translate-y-2.5 rotate-45 bg-white' : 'bg-black'
+          }`}></span>
+          <span className={`block w-full h-0.5 bg-black transition-all duration-300 ease-in-out origin-center ${
+            isSidebarOpen ? 'opacity-0' : ''
+          }`}></span>
+          <span className={`block w-full h-0.5 transition-all duration-300 ease-in-out origin-center ${
+            isSidebarOpen ? '-translate-y-2.5 -rotate-45 bg-white' : 'bg-black'
+          }`}></span>
+        </button>
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 lg:p-8">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-2xl font-bold text-gray-800 mb-6">Profile</h1>
@@ -64,8 +76,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, onLogout, onNavigate }) 
                 <input value={college} onChange={(e) => setCollege(e.target.value)} className="w-full p-3 bg-white border border-black rounded" />
               </div>
               <div>
-                <label className="block text-sm mb-1">Preferences</label>
-                <textarea value={preferences} onChange={(e) => setPreferences(e.target.value)} className="w-full p-3 bg-white border border-black rounded" rows={4} />
+                <label className="block text-sm mb-1">Phone Number</label>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full p-3 bg-white border border-black rounded" placeholder="Enter your phone number" />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Department/Branch</label>
+                <input value={department} onChange={(e) => setDepartment(e.target.value)} className="w-full p-3 bg-white border border-black rounded" placeholder="e.g., Computer Science, Mechanical Engineering" />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Year/Semester</label>
+                <input value={year} onChange={(e) => setYear(e.target.value)} className="w-full p-3 bg-white border border-black rounded" placeholder="e.g., 2nd Year, 4th Semester" />
               </div>
               <div className="flex justify-end">
                 <button onClick={handleSave} disabled={saving} className="px-5 py-2 bg-black text-white rounded disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>

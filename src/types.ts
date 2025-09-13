@@ -22,9 +22,12 @@ export interface UserProfile {
   role: 'student' | 'faculty' | 'admin';
   preferences: string;
   profileComplete: boolean;
+  profileCompleted?: boolean; // New flag to track if profile setup is complete
   email: string;
   college?: string;
+  organizationToken?: string; // 6-digit token for students/faculty to join organization
   adminPassword?: string; // For administrative role verification
+  organization?: Organization; // For admin users who own an organization
 }
 
 export interface Course {
@@ -113,6 +116,18 @@ export interface AdministrativeData {
   subjects?: Subject[];
   sentiment?: string;
   lastUpdated: number;
+}
+
+// Organization structure with token-based access
+export interface Organization {
+  id: string;
+  name: string;
+  token: string; // 6-digit unique token
+  adminId: string; // UID of the admin who created this organization
+  createdAt: number;
+  administrativeData?: AdministrativeData;
+  timetableData?: TimetableData;
+  isPublished?: boolean; // Whether timetable is published for students/faculty
 } 
 
 // Subjects offered per year/branch/discipline used for TT generation

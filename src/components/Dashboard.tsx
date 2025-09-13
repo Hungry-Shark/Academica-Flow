@@ -9,7 +9,7 @@ import { UserProfile, ChatMessage, TimetableData } from '../types';
 // FIX: Import the Icon component to resolve the 'Cannot find name' error.
 import { Icon } from './Icons';
 import { getFirebaseAuth } from '../firebase';
-import { getOrgTimetable, raiseTimetableQuery } from '../firebase';
+import { getOrgTimetable, raiseTimetableQuery, getOrganizationByToken, publishTimetable } from '../firebase';
 
 interface DashboardProps {
   user: UserProfile;
@@ -22,25 +22,56 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
   const [timetableData, setTimetableData] = useState<TimetableData | null>(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'timetable'>('timetable');
+  const [isPublished, setIsPublished] = useState(false);
+  const [organizationName, setOrganizationName] = useState<string>('');
   const timetableRef = useRef<HTMLDivElement>(null);
 
-  // Load organization timetable for all users based on college
+  // Load organization timetable for all users based on organization token
   useEffect(() => {
     const loadOrg = async () => {
-      if (!user.college) return;
-      const data = await getOrgTimetable(user.college);
-      setTimetableData(data);
+      if (!user.organizationToken) return;
+      
+      try {
+        // Get organization details
+        const organization = await getOrganizationByToken(user.organizationToken);
+        if (organization) {
+          setOrganizationName(organization.name);
+          setIsPublished(organization.isPublished || false);
+          
+          // Only show timetable if published (for students/faculty) or if user is admin
+          if (user.role === 'admin' || organization.isPublished) {
+            const data = await getOrgTimetable(user.organizationToken);
+            setTimetableData(data);
+          } else {
+            setTimetableData(null);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading organization data:', error);
+      }
     };
     loadOrg();
-  }, [user.college]);
+  }, [user.organizationToken, user.role]);
 
   // Refresh timetable data when component becomes visible (for when returning from GenerateTT)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && user.college) {
+      if (!document.hidden && user.organizationToken) {
         const loadOrg = async () => {
-          const data = await getOrgTimetable(user.college);
-          setTimetableData(data);
+          try {
+            const organization = await getOrganizationByToken(user.organizationToken);
+            if (organization) {
+              setOrganizationName(organization.name);
+              setIsPublished(organization.isPublished || false);
+              
+              if (user.role === 'admin' || organization.isPublished) {
+                const data = await getOrgTimetable(user.organizationToken);
+                setTimetableData(data);
+              }
+            }
+          } catch (error) {
+            console.error('Error refreshing organization data:', error);
+          }
         };
         loadOrg();
       }
@@ -48,7 +79,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [user.college]);
+  }, [user.organizationToken, user.role]);
 
   const handleDownloadPdf = () => {
     if (!timetableRef.current) return;
@@ -89,9 +120,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
   };
 
   const handleRefreshTimetable = async () => {
-    if (!user.college) return;
-    const data = await getOrgTimetable(user.college);
-    setTimetableData(data);
+    if (!user.organizationToken) return;
+    try {
+      const organization = await getOrganizationByToken(user.organizationToken);
+      if (organization) {
+        setIsPublished(organization.isPublished || false);
+        if (user.role === 'admin' || organization.isPublished) {
+          const data = await getOrgTimetable(user.organizationToken);
+          setTimetableData(data);
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing timetable:', error);
+    }
+  };
+
+  const handlePublishTimetable = async () => {
+    if (!user.organizationToken || user.role !== 'admin') return;
+    
+    try {
+      await publishTimetable(user.organizationToken);
+      setIsPublished(true);
+      alert('Timetable published successfully! Students and faculty can now view it.');
+    } catch (error) {
+      console.error('Error publishing timetable:', error);
+      alert('Failed to publish timetable. Please try again.');
+    }
   };
 
 
@@ -107,42 +161,67 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
         
 
         <div className="flex flex-col gap-4 lg:gap-6 flex-1 min-h-0">
-          {/* Generated Timetables by Branch and Year Section */}
+          {/* Organization Status Section */}
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold text-black">Generated Timetables by Branch & Year</h2>
-              <select className="px-3 py-2 border border-gray-300 rounded-md text-sm">
-                <option value="">All Branches</option>
-                <option value="cse">Computer Science</option>
-                <option value="ece">Electronics & Communication</option>
-                <option value="me">Mechanical Engineering</option>
-                <option value="ce">Civil Engineering</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer">
-                <h3 className="font-semibold text-black">CSE - 1st Year</h3>
-                <p className="text-sm text-gray-600">Section A & B</p>
-                <p className="text-xs text-gray-500 mt-1">Last updated: 2 hours ago</p>
+              <div>
+                <h2 className="text-lg font-bold text-black">{organizationName || 'Organization'} - Timetable Status</h2>
+                <p className="text-sm text-gray-600">Organization Token: {user.organizationToken || 'Not set'}</p>
               </div>
-              <div className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer">
-                <h3 className="font-semibold text-black">CSE - 2nd Year</h3>
-                <p className="text-sm text-gray-600">Section A & B</p>
-                <p className="text-xs text-gray-500 mt-1">Last updated: 1 day ago</p>
-              </div>
-              <div className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer">
-                <h3 className="font-semibold text-black">ECE - 1st Year</h3>
-                <p className="text-sm text-gray-600">Section A</p>
-                <p className="text-xs text-gray-500 mt-1">Last updated: 3 hours ago</p>
+              <div className="flex items-center space-x-4">
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  isPublished 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {isPublished ? 'Published' : 'Draft'}
+                </div>
+                {user.role === 'admin' && timetableData && !isPublished && (
+                  <button 
+                    onClick={handlePublishTimetable}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+                  >
+                    Publish Timetable
+                  </button>
+                )}
               </div>
             </div>
+            
+            {!isPublished && user.role !== 'admin' && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center space-x-2">
+                  <Icon name="clock" className="w-5 h-5 text-yellow-600" />
+                  <p className="text-yellow-800 font-medium">Timetable Not Published Yet</p>
+                </div>
+                <p className="text-yellow-700 text-sm mt-1">
+                  The admin is still working on the timetable. It will appear here once published.
+                </p>
+              </div>
+            )}
+            
+            {!timetableData && user.role === 'admin' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center space-x-2">
+                  <Icon name="info" className="w-5 h-5 text-blue-600" />
+                  <p className="text-blue-800 font-medium">No Timetable Generated</p>
+                </div>
+                <p className="text-blue-700 text-sm mt-1">
+                  Go to "Generate Timetable" to create your organization's timetable using AI.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Main Timetable Layout (read-only) */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6 flex-1 min-h-0">
             <div className="lg:col-span-4 min-h-0 flex flex-col gap-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-bold text-black">{isAdmin ? 'Current Timetable' : 'Your Timetable'}</h2>
+                <h2 className="text-lg font-bold text-black">
+                  {user.role === 'admin' ? 'Organization Timetable' : 'Your Timetable'}
+                  {isPublished && user.role !== 'admin' && (
+                    <span className="ml-2 text-sm text-green-600 font-normal">• Published</span>
+                  )}
+                </h2>
                 <div className="flex space-x-2">
                   {isAdmin && (
                     <button 
