@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Icon } from './Icons';
-import { AuthCredentials } from '../types';
-import { getFirebaseAuth, getGoogleProvider, createUserProfile } from '../firebase';
+import { AuthCredentials, UserProfile } from '../types';
+import { getFirebaseAuth, getGoogleProvider, createUserProfile, getUserProfile } from '../firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect } from 'firebase/auth';
 
 interface LoginProps {
   onEmailSignUp: (credentials: AuthCredentials) => void;
   onEmailSignIn: (credentials: AuthCredentials) => void;
-  onGoogleSignIn: () => void;
+  onGoogleSignIn: (isNewUser: boolean) => void;
   error: string | null;
   onBack: () => void;
 }
@@ -25,20 +25,24 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
     try {
       if (activeTab === 'signin') {
         await signInWithEmailAndPassword(auth, email, password);
+        onEmailSignIn({ email, password });
       } else {
         // Create the Firebase auth user
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
         // Create the user profile in Firestore
-        const newUserProfile = {
+        const newUserProfile: UserProfile = {
+          uid: userCredential.user.uid,
           email: email,
           name: '',  // Will be set in profile setup
           role: 'student',
           preferences: '',
           profileComplete: false,
+          profileCompleted: false,
         };
         
         await createUserProfile(userCredential.user.uid, newUserProfile);
+        onEmailSignUp({ email, password });
       }
     } catch (err: any) {
       alert(err.message);
@@ -114,15 +118,26 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
             const googleProvider = getGoogleProvider();
             try {
               const result = await signInWithPopup(auth, googleProvider);
-              // Create user profile if it's a new Google sign-in
-              const newUserProfile = {
-                email: result.user.email || '',
-                name: result.user.displayName || '',
-                role: 'student' as const,
-                preferences: '',
-                profileComplete: false,
-              };
-              await createUserProfile(result.user.uid, newUserProfile);
+              
+              // Check if user already exists
+              const existingProfile = await getUserProfile(result.user.uid);
+              
+              if (!existingProfile) {
+                // New Google user - create profile
+                const newUserProfile: UserProfile = {
+                  uid: result.user.uid,
+                  email: result.user.email || '',
+                  name: result.user.displayName || '',
+                  role: 'student',
+                  preferences: '',
+                  profileComplete: false,
+                  profileCompleted: false,
+                };
+                await createUserProfile(result.user.uid, newUserProfile);
+                onGoogleSignIn(true); // Mark as new user
+              } else {
+                onGoogleSignIn(false); // Mark as existing user
+              }
             } catch (err: any) {
               // Fallback to redirect for environments where popups are blocked or third-party cookies are disabled
               if (err?.code && typeof err.code === 'string' && (err.code.includes('popup') || err.code.includes('network'))) {

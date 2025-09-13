@@ -19,19 +19,24 @@ const App: React.FC = () => {
   const [appView, setAppView] = useState<AppView>('LANDING');
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isNewSignup, setIsNewSignup] = useState(false);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        // Check if user has completed profile setup
-        const hasCompletedProfile = await checkUserProfileExists(firebaseUser.uid);
+        // Get user profile from Firestore
+        const userProfile = await getUserProfile(firebaseUser.uid);
         
-        if (hasCompletedProfile) {
-          // User has completed profile, load their data
-          const userProfile = await getUserProfile(firebaseUser.uid);
-          if (userProfile) {
-            setUser(userProfile);
+        if (userProfile) {
+          setUser(userProfile);
+          
+          // Check if this is a new signup (profile exists but not completed)
+          if (!userProfile.profileCompleted && isNewSignup) {
+            setAppView('PROFILE_SETUP');
+            setIsNewSignup(false); // Reset flag
+          } else if (userProfile.profileCompleted) {
+            // Existing user with completed profile
             // Check if user has a pending query from before login
             const pendingQuery = localStorage.getItem('pendingQuery');
             if (pendingQuery) {
@@ -40,9 +45,12 @@ const App: React.FC = () => {
               // Route to appropriate dashboard based on role
               setAppView(userProfile.role === 'admin' ? 'ADMIN' : 'DASHBOARD');
             }
+          } else {
+            // Existing user who hasn't completed profile (edge case)
+            setAppView('PROFILE_SETUP');
           }
         } else {
-          // User needs to complete profile setup
+          // No profile found - this shouldn't happen with proper signup flow
           const newUser: UserProfile = {
             uid: firebaseUser.uid,
             email: firebaseUser.email || '',
@@ -57,6 +65,7 @@ const App: React.FC = () => {
         }
       } else {
         setUser(null);
+        setIsNewSignup(false);
         const savedView = localStorage.getItem('lastAppView');
         if (savedView && savedView !== 'LANDING') {
           setAppView('LOGIN');
@@ -67,7 +76,7 @@ const App: React.FC = () => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [isNewSignup]);
 
   const handleNavigateToLogin = async () => {
     const auth = getFirebaseAuth();
@@ -116,11 +125,13 @@ const App: React.FC = () => {
   // Email handlers for actual Firebase authentication
   const handleEmailSignUp = async (credentials: AuthCredentials) => {
     setAuthError(null);
+    setIsNewSignup(true); // Mark this as a new signup
     // This will be handled by Firebase auth state change
   };
 
   const handleEmailSignIn = async (credentials: AuthCredentials) => {
     setAuthError(null);
+    setIsNewSignup(false); // Mark this as existing user login
     // This will be handled by Firebase auth state change
   };
   
@@ -144,7 +155,7 @@ const App: React.FC = () => {
           <Login 
             onEmailSignUp={handleEmailSignUp} 
             onEmailSignIn={handleEmailSignIn} 
-            onGoogleSignIn={() => {}} // Handled by Firebase auth state change
+            onGoogleSignIn={(isNewUser: boolean) => setIsNewSignup(isNewUser)} // Set signup flag for Google auth
             error={authError}
             onBack={() => saveCurrentView('LANDING')}
           />
