@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { initializeFirestore, connectFirestoreEmulator, doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, limit, updateDoc, initializeFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { connectAuthEmulator } from 'firebase/auth';
 import { UserProfile, AdminProfile, AdminSettings, TimetableData, AdministrativeData, Organization } from './types';
 
@@ -82,7 +82,7 @@ async function isTokenUnique(token: string): Promise<boolean> {
 export async function createUserProfile(userId: string, userData: UserProfile) {
     if (!db) initializeFirebase();
     const userRef = doc(db, 'users', userId);
-    await setDoc(userRef, { ...userData, profileCompleted: true }, { merge: true });
+    await setDoc(userRef, userData, { merge: true });
 }
 
 export async function getUserProfile(userId: string) {
@@ -376,9 +376,23 @@ export async function setAdministrativeData(organizationToken: string, data: Adm
         
         // Update administrative data in user's organization
         const userRef = doc(db, 'users', auth.currentUser.uid);
-        await setDoc(userRef, { 
-            'organization.administrativeData': toSave 
-        }, { merge: true });
+        
+        // First get the current user document to ensure organization exists
+        const userDoc = await getDoc(userRef);
+        if (!userDoc.exists()) {
+            throw new Error('User document does not exist');
+        }
+        
+        const userData = userDoc.data();
+        const updatedUserData = {
+            ...userData,
+            organization: {
+                ...userData.organization,
+                administrativeData: toSave
+            }
+        };
+        
+        await setDoc(userRef, updatedUserData);
     } catch (error) {
         console.error('Firestore: Error saving administrative data:', error);
         throw error;
@@ -387,17 +401,37 @@ export async function setAdministrativeData(organizationToken: string, data: Adm
 
 export async function getAdministrativeData(organizationToken?: string | null) {
     if (!db) initializeFirebase();
-    if (!organizationToken) return null;
+    if (!organizationToken) {
+        console.log('getAdministrativeData: No organization token provided');
+        return null;
+    }
     if (!auth?.currentUser) {
         console.warn('User not authenticated, cannot get administrative data');
         return null;
     }
     try {
-        const organization = await getOrganizationByToken(organizationToken);
-        if (!organization) {
+        console.log('getAdministrativeData: Getting data for user:', auth.currentUser.uid, 'token:', organizationToken);
+        // Get data from current user's organization (where it was saved)
+        const userRef = doc(db, 'users', auth.currentUser.uid);
+        const userDoc = await getDoc(userRef);
+        
+        if (!userDoc.exists()) {
+            console.log('getAdministrativeData: User document does not exist');
             return null;
         }
         
+        const userData = userDoc.data();
+        console.log('getAdministrativeData: User data:', userData);
+        const organization = userData.organization;
+        
+        // Verify the user has the correct organization token
+        if (!organization || organization.token !== organizationToken) {
+            console.log('getAdministrativeData: Organization token mismatch or missing organization');
+            console.log('Expected token:', organizationToken, 'Found token:', organization?.token);
+            return null;
+        }
+        
+        console.log('getAdministrativeData: Returning administrative data:', organization.administrativeData);
         return organization.administrativeData || null;
     } catch (error) {
         console.error('Error getting administrative data:', error);

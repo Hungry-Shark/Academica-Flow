@@ -25,7 +25,9 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
   const loadAdminData = async () => {
     setLoading(true);
     try {
+      console.log('Loading admin data for organization token:', user.organizationToken);
       if (!user.organizationToken) {
+        console.log('No organization token found');
         // Initialize with empty data if no organization token
         const emptyData: AdministrativeData = {
           departments: [],
@@ -41,10 +43,13 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
       }
 
       const data = await getAdministrativeData(user.organizationToken);
+      console.log('Loaded administrative data:', data);
       if (data) {
         setAdminData(data);
+        console.log('Setting sentiment to:', data.sentiment);
         setSentiment(data.sentiment || '');
       } else {
+        console.log('No data returned, initializing with empty data');
         // Initialize with empty data
         const emptyData: AdministrativeData = {
           departments: [],

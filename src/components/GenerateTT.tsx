@@ -100,6 +100,7 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
         ]);
         setAdminContext(adminData);
         setExistingOrgTT(existingTT);
+        console.log('Loaded admin context for timetable generation:', adminData);
       } catch (error) {
         console.warn('Could not load admin context:', error);
         // Continue without admin context - user can still generate timetables
@@ -215,7 +216,9 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
 
       try {
         const raw: unknown = parseTimetableJSON(timetableJsonString);
+        console.log("Raw parsed JSON:", raw);
         const normalized = normalizeTimetable(raw);
+        console.log("Normalized timetable:", normalized);
         setTimetableData(normalized);
         setEditData(normalized);
         setMessages(prev => [...prev, { sender: 'model', text: "Here is your generated timetable. You can preview it, edit it, or generate a new one." }]);

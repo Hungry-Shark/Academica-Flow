@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
-  name: 'logo' | 'menu' | 'close' | 'dashboard' | 'profile' | 'download' | 'image' | 'spinner' | 'google' | 'back' | 'sliders' | 'calendar' | 'users' | 'tools' | 'mail' | 'github' | 'twitter' | 'linkedin' | 'edit' | 'save' | 'refresh' | 'clock' | 'info';
+  name: 'logo' | 'menu' | 'close' | 'dashboard' | 'profile' | 'download' | 'image' | 'spinner' | 'google' | 'back' | 'sliders' | 'calendar' | 'users' | 'tools' | 'mail' | 'github' | 'twitter' | 'linkedin' | 'edit' | 'save' | 'refresh' | 'clock' | 'info' | 'home' | 'user' | 'logout';
 }
 
 export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
@@ -170,6 +170,28 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
           <circle cx="12" cy="12" r="10" strokeWidth="2" />
           <path d="M12 16v-4" strokeWidth="2" />
           <path d="M12 8h.01" strokeWidth="2" />
+        </svg>
+      );
+    case 'home':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" strokeWidth="2" />
+          <path d="M9 22V12h6v10" strokeWidth="2" />
+        </svg>
+      );
+    case 'user':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" strokeWidth="2" />
+          <circle cx="12" cy="7" r="4" strokeWidth="2" />
+        </svg>
+      );
+    case 'logout':
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" strokeWidth="2" />
+          <path d="M16 17l5-5-5-5" strokeWidth="2" />
+          <path d="M21 12H9" strokeWidth="2" />
         </svg>
       );
     default:

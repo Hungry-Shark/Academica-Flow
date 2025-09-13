@@ -1,7 +1,8 @@
 // FIX: Create the main App component
 import React, { useState, useEffect } from 'react';
-import { getFirebaseAuth, createUserProfile, getUserProfile, checkUserProfileExists } from './firebase';
+import { getFirebaseAuth, createUserProfile, getUserProfile, checkUserProfileExists, getFirestoreDb } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { LandingPage } from './components/Landingpage';
 import { Login } from './components/Login';
 import { ProfileSetup } from './components/ProfileSetup';
@@ -13,6 +14,7 @@ import { UserProfile, AppView, AuthCredentials } from './types';
 import { Profile } from './components/Profile';
 import { GenerateTT } from './components/GenerateTT';
 import { AdministrativeInfo } from './components/AdministrativeInfo';
+import { GlobalMenu } from './components/GlobalMenu';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -101,7 +103,9 @@ const App: React.FC = () => {
     const auth = getFirebaseAuth();
     if (user && auth.currentUser) {
       const updatedUser = { ...user, ...profileUpdates, profileComplete: true, profileCompleted: true };
-      await createUserProfile(auth.currentUser.uid, updatedUser);
+      const db = getFirestoreDb();
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      await setDoc(userRef, updatedUser, { merge: true });
       setUser(updatedUser);
       setAppView(updatedUser.role === 'admin' ? 'ADMIN' : 'DASHBOARD');
     }
@@ -182,6 +186,15 @@ const App: React.FC = () => {
 
   return (
     <div className="bg-white min-h-screen">
+      {/* Global Menu - Show on all pages except loading and landing (landing has its own) */}
+      {!loading && appView !== 'LANDING' && (
+        <GlobalMenu
+          isAuthenticated={!!user}
+          onNavigate={saveCurrentView}
+          onLogout={handleLogout}
+          currentView={appView}
+        />
+      )}
       {renderContent()}
     </div>
   );
