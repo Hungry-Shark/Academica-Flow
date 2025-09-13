@@ -24,15 +24,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
   const [currentView, setCurrentView] = useState<'timetable'>('timetable');
   const timetableRef = useRef<HTMLDivElement>(null);
 
-  // Load organization timetable for non-admin users based on college
+  // Load organization timetable for all users based on college
   useEffect(() => {
     const loadOrg = async () => {
-      if (isAdmin) return;
+      if (!user.college) return;
       const data = await getOrgTimetable(user.college);
       setTimetableData(data);
     };
     loadOrg();
-  }, [isAdmin, user.college]);
+  }, [user.college]);
+
+  // Refresh timetable data when component becomes visible (for when returning from GenerateTT)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user.college) {
+        const loadOrg = async () => {
+          const data = await getOrgTimetable(user.college);
+          setTimetableData(data);
+        };
+        loadOrg();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user.college]);
 
   const handleDownloadPdf = () => {
     if (!timetableRef.current) return;
@@ -70,6 +86,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
     if (!auth.currentUser) return;
     await raiseTimetableQuery(auth.currentUser.uid, message);
     alert('Your query has been submitted to the admin.');
+  };
+
+  const handleRefreshTimetable = async () => {
+    if (!user.college) return;
+    const data = await getOrgTimetable(user.college);
+    setTimetableData(data);
   };
 
 
@@ -122,6 +144,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-bold text-black">{isAdmin ? 'Current Timetable' : 'Your Timetable'}</h2>
                 <div className="flex space-x-2">
+                  {isAdmin && (
+                    <button 
+                      onClick={handleRefreshTimetable} 
+                      className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                    >
+                      <Icon name="refresh" className="w-4 h-4" />
+                      <span>Refresh</span>
+                    </button>
+                  )}
                   {!isAdmin && (
                     <button onClick={handleRaiseQuery} className="flex items-center space-x-2 px-3 py-2 text-sm bg-white border border-black rounded-md text-black hover:bg-black/5 transition">
                       <Icon name="mail" className="w-4 h-4" />

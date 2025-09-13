@@ -118,6 +118,8 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
     try {
       const prompt = `You are a university timetable generator for Rajkiya Engineering College, Sonbhardra. Create a JSON timetable based on the user's request. Use the provided organization context and follow the exact academic format.
 
+        CRITICAL: Return ONLY a valid JSON object. Do not include any text before or after the JSON. Do not include markdown formatting or code blocks.
+
         IMPORTANT FORMATTING RULES:
         - Use exact time slots: "9:30 am-10:20 am", "10:20 am-11:10 am", "11:10 am-12:00 pm", "12:00 pm-12:50 pm", "12:50 pm-2:20 pm", "2:20 pm-3:10 pm", "3:10 pm-4:00 pm", "4:00 pm-4:50 pm"
         - Course codes should be like: BCS701, BOE070, BCS753, BCS754, BCS751, BCS752
@@ -130,7 +132,9 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
         USER_PREFERENCES: ${user.preferences || 'none'}
         ORGANIZATION_CONTEXT: ${JSON.stringify(adminContext || {}, null, 2)}
         EXISTING_TIMETABLE: ${JSON.stringify(existingOrgTT || {}, null, 2)}
-        PROMPT: ${message}`;
+        PROMPT: ${message}
+
+        Return ONLY the JSON object, nothing else.`;
 
       const result = await ai.getGenerativeModel({ 
         model: "gemini-1.5-flash",
@@ -145,8 +149,72 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
       });
 
       const timetableJsonString = result.response.text();
+      
+      // Robust JSON parsing with fallback strategies
+      const parseTimetableJSON = (jsonString: string) => {
+        // Strategy 1: Try direct parsing
+        try {
+          return JSON.parse(jsonString);
+        } catch (e) {
+          console.warn("Direct parsing failed, trying extraction strategies...");
+        }
+
+        // Strategy 2: Extract JSON from markdown code blocks
+        const codeBlockMatch = jsonString.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+        if (codeBlockMatch) {
+          try {
+            return JSON.parse(codeBlockMatch[1]);
+          } catch (e) {
+            console.warn("Code block extraction failed");
+          }
+        }
+
+        // Strategy 3: Find the first complete JSON object
+        const jsonMatch = jsonString.match(/\{[\s\S]*?\}/);
+        if (jsonMatch) {
+          try {
+            return JSON.parse(jsonMatch[0]);
+          } catch (e) {
+            console.warn("First JSON object extraction failed");
+          }
+        }
+
+        // Strategy 4: Try to fix common JSON issues
+        let cleanedJson = jsonString.trim();
+        
+        // Remove trailing commas and extra content after valid JSON
+        const lastBraceIndex = cleanedJson.lastIndexOf('}');
+        if (lastBraceIndex > 0) {
+          cleanedJson = cleanedJson.substring(0, lastBraceIndex + 1);
+        }
+        
+        // Remove any text before the first {
+        const firstBraceIndex = cleanedJson.indexOf('{');
+        if (firstBraceIndex > 0) {
+          cleanedJson = cleanedJson.substring(firstBraceIndex);
+        }
+
+        try {
+          return JSON.parse(cleanedJson);
+        } catch (e) {
+          console.warn("Cleaned JSON parsing failed");
+        }
+
+        // Strategy 5: Look for timetable object specifically
+        const timetableMatch = jsonString.match(/"timetable"\s*:\s*(\{[\s\S]*?\})/);
+        if (timetableMatch) {
+          try {
+            return { timetable: JSON.parse(timetableMatch[1]) };
+          } catch (e) {
+            console.warn("Timetable object extraction failed");
+          }
+        }
+
+        throw new Error("All parsing strategies failed");
+      };
+
       try {
-        const raw: unknown = JSON.parse(timetableJsonString);
+        const raw: unknown = parseTimetableJSON(timetableJsonString);
         const normalized = normalizeTimetable(raw);
         setTimetableData(normalized);
         setEditData(normalized);
@@ -270,10 +338,24 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
   const normalizeTimetable = (raw: any): TimetableData => {
     const result: TimetableData = {} as TimetableData;
     if (!raw || typeof raw !== 'object') return result;
-    const dayKeys = Object.keys(raw);
+    
+    // Handle different JSON structures
+    let timetableData = raw;
+    
+    // If the response has a 'timetable' property, use that
+    if (raw.timetable && typeof raw.timetable === 'object') {
+      timetableData = raw.timetable;
+    }
+    
+    // If the response has a 'data' property, use that
+    if (raw.data && typeof raw.data === 'object') {
+      timetableData = raw.data;
+    }
+    
+    const dayKeys = Object.keys(timetableData);
     canonicalDays.forEach(day => {
       const mapKey = findKeyInsensitive(day, dayKeys);
-      const dayObj = mapKey ? raw[mapKey] : undefined;
+      const dayObj = mapKey ? timetableData[mapKey] : undefined;
       result[day.toUpperCase()] = {} as any;
       if (dayObj && typeof dayObj === 'object') {
         const slotKeys = Object.keys(dayObj);

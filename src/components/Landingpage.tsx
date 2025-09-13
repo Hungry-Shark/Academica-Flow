@@ -106,61 +106,74 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
       <main className="p-5 w-full box-border flex-1 pt-28">
         {/* Hero Section */}
         <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4 relative">
-          {/* Hero Image with floating animation */}
-          <div className="absolute top-0 left-0 w-64 h-64 md:w-80 md:h-80 opacity-90">
+          {/* Hero Image with floating animation - positioned behind text */}
+          <div className="absolute bottom-0 left-0 w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 opacity-75 z-0">
             <img 
               src="/images/hero.png" 
               alt="Academic success" 
               className="w-full h-full object-contain animate-float-slow hero-image"
               style={{ 
-                filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.1))',
+                filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.15))',
                 animationDelay: '0s'
               }}
             />
           </div>
           
-          <h1 className="text-6xl font-bold mb-4 relative z-10">Welcome to Academica Flow</h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl relative z-10">
+          {/* Hero2 Image with floating animation - positioned behind text */}
+          <div className="absolute top-0 right-0 w-40 h-40 sm:w-56 sm:h-56 md:w-72 md:h-72 lg:w-88 lg:h-88 opacity-70 z-0">
+            <img 
+              src="/images/hero2.png" 
+              alt="Academic collaboration" 
+              className="w-full h-full object-contain animate-float-medium hero-image"
+              style={{ 
+                filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.15))',
+                animationDelay: '1.5s'
+              }}
+            />
+          </div>
+          
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 relative z-10 px-4">Welcome to Academica Flow</h1>
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-8 max-w-2xl relative z-10 px-4">
             Streamline your academic journey with intelligent timetable management. 
             Built for students, faculty, and administrators.
           </p>
 
           {/* Features Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl">
-            <div className="p-6 border border-gray-200 rounded-lg">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <Icon name="calendar" className="w-6 h-6 text-blue-500" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 max-w-4xl w-full px-4">
+            <div className="p-4 sm:p-6 border border-gray-200 rounded-lg">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4 mx-auto">
+                <Icon name="calendar" className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Smart Timetables</h3>
-              <p className="text-gray-600">AI-powered timetable generation that considers preferences and constraints.</p>
+              <h3 className="text-lg sm:text-xl font-semibold mb-2 text-center">Smart Timetables</h3>
+              <p className="text-sm sm:text-base text-gray-600 text-center">AI-powered timetable generation that considers preferences and constraints.</p>
             </div>
-            <div className="p-6 border border-gray-200 rounded-lg">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <Icon name="users" className="w-6 h-6 text-green-500" />
+            <div className="p-4 sm:p-6 border border-gray-200 rounded-lg">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4 mx-auto">
+                <Icon name="users" className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Role-Based Access</h3>
-              <p className="text-gray-600">Different interfaces for students, faculty, and administrators.</p>
+              <h3 className="text-lg sm:text-xl font-semibold mb-2 text-center">Role-Based Access</h3>
+              <p className="text-sm sm:text-base text-gray-600 text-center">Different interfaces for students, faculty, and administrators.</p>
             </div>
-            <div className="p-6 border border-gray-200 rounded-lg">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <Icon name="tools" className="w-6 h-6 text-purple-500" />
+            <div className="p-4 sm:p-6 border border-gray-200 rounded-lg sm:col-span-2 lg:col-span-1">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-3 sm:mb-4 mx-auto">
+                <Icon name="tools" className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Easy Management</h3>
-              <p className="text-gray-600">Intuitive tools for managing courses, rooms, and schedules.</p>
+              <h3 className="text-lg sm:text-xl font-semibold mb-2 text-center">Easy Management</h3>
+              <p className="text-sm sm:text-base text-gray-600 text-center">Intuitive tools for managing courses, rooms, and schedules.</p>
             </div>
           </div>
         </div>
 
-        <section id="about" className="py-20 px-4">
+        <section id="about" className="py-12 sm:py-16 lg:py-20 px-4">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-4xl font-bold mb-12 text-center">About Academica Flow</h2>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-8 sm:mb-12 text-center">About Academica Flow</h2>
             
             {/* Problem Section */}
-            <div className="mb-16 relative">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                <div className="order-2 lg:order-1">
-                  <h3 className="text-3xl font-bold mb-6 text-gray-800">The Timetable Creation Struggle</h3>
-                  <div className="space-y-4 text-lg text-gray-600">
+            <div className="mb-12 sm:mb-16 relative">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
+                <div className="order-2 lg:order-1 relative z-10">
+                  <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 text-gray-800">The Timetable Creation Struggle</h3>
+                  <div className="space-y-3 sm:space-y-4 text-sm sm:text-base lg:text-lg text-gray-600">
                     <p>
                       Creating academic timetables is a nightmare that every educational institution faces. 
                       Administrators spend countless hours juggling:
@@ -179,13 +192,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
                   </div>
                 </div>
                 <div className="order-1 lg:order-2 flex justify-center">
-                  <div className="w-80 h-80 relative">
+                  <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 relative z-0">
                     <img 
                       src="/images/about1.png" 
                       alt="Overwhelmed administrator" 
                       className="w-full h-full object-contain transform -rotate-6 animate-float-medium about-image"
                       style={{ 
-                        filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.15))',
+                        filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.2))',
                         animationDelay: '1s'
                       }}
                     />
@@ -196,23 +209,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
 
             {/* Solution Section */}
             <div className="relative">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
                 <div className="flex justify-center">
-                  <div className="w-80 h-80 relative">
+                  <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 relative z-0">
                     <img 
                       src="/images/about2.png" 
                       alt="AI-powered solution" 
                       className="w-full h-full object-contain transform rotate-6 animate-float-slow about-image"
                       style={{ 
-                        filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.15))',
+                        filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.2))',
                         animationDelay: '2s'
                       }}
                     />
                   </div>
                 </div>
-                <div>
-                  <h3 className="text-3xl font-bold mb-6 text-gray-800">Our AI-Powered Solution</h3>
-                  <div className="space-y-4 text-lg text-gray-600">
+                <div className="relative z-10">
+                  <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 text-gray-800">Our AI-Powered Solution</h3>
+                  <div className="space-y-3 sm:space-y-4 text-sm sm:text-base lg:text-lg text-gray-600">
                     <p>
                       Academica Flow revolutionizes timetable creation with intelligent automation that:
                     </p>
@@ -235,16 +248,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
           </div>
         </section>
 
-        <section id="contact" className="py-20 px-4 bg-gray-50">
+        <section id="contact" className="py-12 sm:py-16 lg:py-20 px-4 bg-gray-50">
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-8">Get in Touch</h2>
-            <p className="text-lg text-gray-600 mb-8">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-8">Get in Touch</h2>
+            <p className="text-base sm:text-lg text-gray-600 mb-6 sm:mb-8">
               Ready to transform your academic scheduling? Contact us to learn more about 
               implementing Academica Flow in your institution.
             </p>
             <button
               onClick={() => setShowQueryForm(true)}
-              className="px-8 py-4 bg-black text-white rounded-lg text-lg font-semibold hover:bg-gray-800 transition-colors duration-300"
+              className="px-6 sm:px-8 py-3 sm:py-4 bg-black text-white rounded-lg text-base sm:text-lg font-semibold hover:bg-gray-800 transition-colors duration-300"
             >
               Any Questions?
             </button>
