@@ -256,8 +256,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
                   </button>
                 </div>
               </div>
-              <div ref={timetableRef} className="flex-1 min-h-0">
-                <Timetable data={timetableData} />
+              <div ref={timetableRef} className="flex-1 min-h-0 relative">
+                <Timetable 
+                  data={timetableData} 
+                  collegeName={organizationName || "RAJKIYA ENGINEERING COLLEGE, SONBHARDRA"}
+                />
               </div>
             </div>
           </div>

@@ -81,6 +81,11 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
   const [adminContext, setAdminContext] = useState<AdministrativeData | null>(null);
   const [existingOrgTT, setExistingOrgTT] = useState<TimetableData | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [timetableInfo, setTimetableInfo] = useState<{
+    branch?: string;
+    semester?: string;
+    academicYear?: string;
+  }>({});
 
   // Enforce admin-only access
   useEffect(() => {
@@ -111,10 +116,92 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
     loadContext();
   }, [user.organizationToken]);
 
+  // Extract timetable information from user query
+  const extractTimetableInfo = (query: string) => {
+    const info: { branch?: string; semester?: string; academicYear?: string } = {};
+    
+    // Extract branch information - improved patterns
+    const branchPatterns = [
+      /(?:for|of|in)\s+(cse|computer science|cs|it|ece|electronics|ele|mechanical|civil|electrical)\s+(?:year|sem|semester)/i,
+      /(cse|computer science|cs|it|ece|electronics|ele|mechanical|civil|electrical)\s+(?:year|sem|semester)/i,
+      /(?:cse|computer science|cs|it|ece|electronics|ele|mechanical|civil|electrical)/i
+    ];
+    
+    for (const pattern of branchPatterns) {
+      const match = query.match(pattern);
+      if (match) {
+        const branch = match[1] || match[0];
+        if (branch.toLowerCase().includes('cse') || branch.toLowerCase().includes('computer')) {
+          info.branch = 'COMPUTER SCIENCE AND ENGINEERING';
+        } else if (branch.toLowerCase().includes('it')) {
+          info.branch = 'INFORMATION TECHNOLOGY';
+        } else if (branch.toLowerCase().includes('ece')) {
+          info.branch = 'ELECTRONICS AND COMMUNICATION ENGINEERING';
+        } else if (branch.toLowerCase().includes('electronics') || branch.toLowerCase().includes('ele')) {
+          info.branch = 'ELECTRONICS AND COMMUNICATION ENGINEERING';
+        } else if (branch.toLowerCase().includes('mechanical')) {
+          info.branch = 'MECHANICAL ENGINEERING';
+        } else if (branch.toLowerCase().includes('civil')) {
+          info.branch = 'CIVIL ENGINEERING';
+        } else if (branch.toLowerCase().includes('electrical')) {
+          info.branch = 'ELECTRICAL ENGINEERING';
+        } else {
+          info.branch = branch.toUpperCase();
+        }
+        break;
+      }
+    }
+    
+    // If no branch found, try to extract from the beginning of the query
+    if (!info.branch) {
+      const queryStart = query.toLowerCase().trim();
+      if (queryStart.includes('cse') || queryStart.includes('computer')) {
+        info.branch = 'COMPUTER SCIENCE AND ENGINEERING';
+      } else if (queryStart.includes('it')) {
+        info.branch = 'INFORMATION TECHNOLOGY';
+      } else if (queryStart.includes('ece') || queryStart.includes('electronics') || queryStart.includes('ele')) {
+        info.branch = 'ELECTRONICS AND COMMUNICATION ENGINEERING';
+      }
+    }
+    
+    // Extract year/semester information
+    const yearPatterns = [
+      /(\d+)(?:st|nd|rd|th)?\s+(?:year|sem|semester)/i,
+      /(?:year|sem|semester)\s+(\d+)/i,
+      /(\d+)(?:st|nd|rd|th)?\s+(?:sem|semester)/i
+    ];
+    
+    for (const pattern of yearPatterns) {
+      const match = query.match(pattern);
+      if (match) {
+        const year = parseInt(match[1]);
+        if (year >= 1 && year <= 4) {
+          info.semester = `${year}${year === 1 ? 'st' : year === 2 ? 'nd' : year === 3 ? 'rd' : 'th'} Year`;
+          break;
+        }
+      }
+    }
+    
+    // Extract academic year
+    const academicYearPattern = /(\d{4})-(\d{4})/;
+    const academicYearMatch = query.match(academicYearPattern);
+    if (academicYearMatch) {
+      info.academicYear = `${academicYearMatch[1]}-${academicYearMatch[2]}`;
+    } else {
+      info.academicYear = '2025-26'; // Default
+    }
+    
+    return info;
+  };
+
   const handleSendMessage = async (message: string) => {
     setIsLoading(true);
     const userMessage: ChatMessage = { sender: 'user', text: message };
     setMessages(prev => [...prev, userMessage]);
+    
+    // Extract timetable information from the query
+    const extractedInfo = extractTimetableInfo(message);
+    setTimetableInfo(extractedInfo);
 
     try {
       const prompt = `You are a university timetable generator for Rajkiya Engineering College, Sonbhardra. Create a JSON timetable based on the user's request. Use the provided organization context and follow the exact academic format.
@@ -122,20 +209,58 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
         CRITICAL: Return ONLY a valid JSON object. Do not include any text before or after the JSON. Do not include markdown formatting or code blocks.
 
         IMPORTANT FORMATTING RULES:
-        - Use exact time slots: "9:30 am-10:20 am", "10:20 am-11:10 am", "11:10 am-12:00 pm", "12:00 pm-12:50 pm", "12:50 pm-2:20 pm", "2:20 pm-3:10 pm", "3:10 pm-4:00 pm", "4:00 pm-4:50 pm"
-        - Course codes should be like: BCS701, BOE070, BCS753, BCS754, BCS751, BCS752
-        - Faculty names should be initials in parentheses: (NU), (AKT), (VT), (KS), (MY), (AS)
-        - Rooms should be like: AB2-CC, AB2/T6, AB1-CC, CLASS ROOM-AB2/T-1/SC
+        - Use exact time slots as object keys: "9:30 am-10:20 am", "10:20 am-11:10 am", "11:10 am-12:00 pm", "12:00 pm-12:50 pm", "12:50 pm-2:20 pm", "2:20 pm-3:10 pm", "3:10 pm-4:00 pm", "4:00 pm-4:50 pm"
+        - Course codes should be like: BCS701, BOE070, BCS753, BCS754, BCS751, BCS752 (for CS) or BEC701, BEC702, BEC703, BEC704 (for Electronics)
+        - Faculty names should be initials in SINGLE parentheses: (NU), (AKT), (VT), (KS), (MY), (AS) - NOT double parentheses
         - Days should be: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday
         - Avoid clashes with existing timetable
-        - Use organization context for realistic scheduling
+        - Return data as OBJECTS with time slot keys, NOT arrays
+
+        CLASSROOM RESTRICTIONS (CRITICAL):
+        - Use ONLY 1-2 classrooms per year/branch
+        - For 1st-2nd year: Use S-1, S-2 (regular classrooms)
+        - For 3rd-4th year: Use S-3, S-4 (advanced classrooms)
+        - For labs: Use LAB-1, LAB-2 only
+        - DO NOT use more than 2 different room numbers per timetable
+
+        YEAR-SPECIFIC SCHEDULING RULES (from sentiment):
+        - 1st Year: Full timetable, basic subjects, Saturday half-day with non-credit subjects
+        - 2nd Year: Full timetable, intermediate subjects, Saturday half-day
+        - 3rd Year: Less scheduled, Friday half-day, daily labs, no Saturday classes
+        - 4th Year: First half only, daily labs, Friday half-day, no Saturday classes
+
+        VARIETY REQUIREMENTS:
+        - Use DIFFERENT course codes for different time slots and days
+        - Use DIFFERENT faculty members for different subjects
+        - Create realistic scheduling patterns based on year requirements
+        - Ensure faculty don't have conflicting schedules
+        - Mix lectures and practicals appropriately
+        - Follow year-specific scheduling patterns from sentiment
+
+        COURSE CODES BY YEAR (use appropriate ones):
+        - 1st Year: BCS101, BCS102, BCS103, BCS104, BCS105, BCS106 (CS) or BEC101, BEC102, BEC103, BEC104, BEC105, BEC106 (Electronics)
+        - 2nd Year: BCS201, BCS202, BCS203, BCS204, BCS205, BCS206 (CS) or BEC201, BEC202, BEC203, BEC204, BEC205, BEC206 (Electronics)
+        - 3rd Year: BCS301, BCS302, BCS303, BCS304, BCS305, BCS306 (CS) or BEC301, BEC302, BEC303, BEC304, BEC305, BEC306 (Electronics)
+        - 4th Year: BCS401, BCS402, BCS403, BCS404, BCS405, BCS406 (CS) or BEC401, BEC402, BEC403, BEC404, BEC405, BEC406 (Electronics)
+
+        FACULTY ASSIGNMENTS: Use faculty from organization context if available, otherwise use: (NU), (AKT), (VT), (KS), (MY), (AS), (RS), (PK), (SM), (DJ)
+
+        REQUIRED JSON STRUCTURE:
+        {
+          "Monday": {
+            "9:30 am-10:20 am": {"courseName": "BCS201", "facultyName": "(NU)", "room": "S-1"},
+            "10:20 am-11:10 am": {"courseName": "BCS202", "facultyName": "(AKT)", "room": "S-2"}
+          },
+          "Tuesday": { ... }
+        }
 
         USER_PREFERENCES: ${user.preferences || 'none'}
         ORGANIZATION_CONTEXT: ${JSON.stringify(adminContext || {}, null, 2)}
         EXISTING_TIMETABLE: ${JSON.stringify(existingOrgTT || {}, null, 2)}
+        SENTIMENT_RULES: ${adminContext?.sentiment || 'No specific sentiment rules provided'}
         PROMPT: ${message}
 
-        Return ONLY the JSON object, nothing else.`;
+        IMPORTANT: Follow the sentiment rules for year-specific scheduling. Use only 1-2 classrooms per timetable. Return ONLY the JSON object, nothing else.`;
 
       const result = await ai.getGenerativeModel({ 
         model: "gemini-1.5-flash",
@@ -219,9 +344,40 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
         console.log("Raw parsed JSON:", raw);
         const normalized = normalizeTimetable(raw);
         console.log("Normalized timetable:", normalized);
-        setTimetableData(normalized);
-        setEditData(normalized);
-        setMessages(prev => [...prev, { sender: 'model', text: "Here is your generated timetable. You can preview it, edit it, or generate a new one." }]);
+        
+        // Validate timetable variety
+        const validationResult = validateTimetableVariety(normalized);
+        console.log("Timetable validation:", validationResult);
+        
+        if (!validationResult.isValid) {
+          console.warn("Generated timetable lacks variety:", validationResult.issues);
+          
+          // Try to enhance the timetable with more variety
+          const enhancedTimetable = enhanceTimetableVariety(normalized, extractedInfo.branch);
+          const enhancedValidation = validateTimetableVariety(enhancedTimetable);
+          
+          if (enhancedValidation.isValid) {
+            console.log("Enhanced timetable with better variety");
+            setTimetableData(enhancedTimetable);
+            setEditData(enhancedTimetable);
+            setMessages(prev => [...prev, { 
+              sender: 'model', 
+              text: "I generated a timetable with improved variety. You can preview it, edit it, or generate a new one." 
+            }]);
+          } else {
+            setTimetableData(normalized);
+            setEditData(normalized);
+            setMessages(prev => [...prev, { 
+              sender: 'model', 
+              text: `I generated a timetable, but it seems to have repetitive data. ${validationResult.issues.join(' ')} Please try generating again or be more specific about the subjects and faculty you want.` 
+            }]);
+          }
+        } else {
+          setMessages(prev => [...prev, { sender: 'model', text: "Here is your generated timetable. You can preview it, edit it, or generate a new one." }]);
+          console.log("Setting timetable data to state:", normalized);
+          setTimetableData(normalized);
+          setEditData(normalized);
+        }
       } catch (e) {
         console.error("Failed to parse timetable JSON:", e, "Received:", timetableJsonString);
         setMessages(prev => [...prev, { sender: 'model', text: "I had trouble structuring the timetable. Could you try rephrasing your request?" }]);
@@ -390,13 +546,195 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
     
     // Format the fields according to the expected format
     const formattedCourse = course.replace(/\s+/g, '').toUpperCase();
+    // Remove any existing parentheses and add single ones
     const formattedFaculty = faculty.replace(/[()]/g, '').trim().toUpperCase();
     const formattedRoom = room.replace(/\s+/g, '-').toUpperCase();
+    
     
     return {
       courseName: formattedCourse,
       facultyName: formattedFaculty ? `(${formattedFaculty})` : '',
       room: formattedRoom
+    };
+  };
+
+  // Enhancement function to add variety to repetitive timetables
+  const enhanceTimetableVariety = (timetable: TimetableData, branch?: string): TimetableData => {
+    const enhanced = JSON.parse(JSON.stringify(timetable)) as TimetableData;
+    
+    // Determine year from existing course codes
+    const existingCourses = new Set<string>();
+    Object.values(enhanced).forEach(dayData => {
+      Object.values(dayData).forEach(slot => {
+        if (slot && slot.courseName) {
+          existingCourses.add(slot.courseName);
+        }
+      });
+    });
+    
+    // Determine year and appropriate course codes
+    let courseOptions: string[];
+    let roomOptions: string[];
+    
+    const hasBCS1 = Array.from(existingCourses).some(c => c.includes('BCS1'));
+    const hasBCS2 = Array.from(existingCourses).some(c => c.includes('BCS2'));
+    const hasBCS3 = Array.from(existingCourses).some(c => c.includes('BCS3'));
+    const hasBCS4 = Array.from(existingCourses).some(c => c.includes('BCS4'));
+    const hasBEC1 = Array.from(existingCourses).some(c => c.includes('BEC1'));
+    const hasBEC2 = Array.from(existingCourses).some(c => c.includes('BEC2'));
+    const hasBEC3 = Array.from(existingCourses).some(c => c.includes('BEC3'));
+    const hasBEC4 = Array.from(existingCourses).some(c => c.includes('BEC4'));
+    
+    // Determine course options based on branch and year
+    const isElectronics = branch?.toLowerCase().includes('electronics') || branch?.toLowerCase().includes('ece');
+    
+    if (hasBCS1 || hasBEC1) {
+      if (isElectronics) {
+        courseOptions = ['BEC101', 'BEC102', 'BEC103', 'BEC104', 'BEC105', 'BEC106'];
+      } else {
+        courseOptions = ['BCS101', 'BCS102', 'BCS103', 'BCS104', 'BCS105', 'BCS106'];
+      }
+      roomOptions = ['S-1', 'S-2'];
+    } else if (hasBCS2 || hasBEC2) {
+      if (isElectronics) {
+        courseOptions = ['BEC201', 'BEC202', 'BEC203', 'BEC204', 'BEC205', 'BEC206'];
+      } else {
+        courseOptions = ['BCS201', 'BCS202', 'BCS203', 'BCS204', 'BCS205', 'BCS206'];
+      }
+      roomOptions = ['S-1', 'S-2'];
+    } else if (hasBCS3 || hasBEC3) {
+      if (isElectronics) {
+        courseOptions = ['BEC301', 'BEC302', 'BEC303', 'BEC304', 'BEC305', 'BEC306'];
+      } else {
+        courseOptions = ['BCS301', 'BCS302', 'BCS303', 'BCS304', 'BCS305', 'BCS306'];
+      }
+      roomOptions = ['S-3', 'S-4'];
+    } else if (hasBCS4 || hasBEC4) {
+      if (isElectronics) {
+        courseOptions = ['BEC401', 'BEC402', 'BEC403', 'BEC404', 'BEC405', 'BEC406'];
+      } else {
+        courseOptions = ['BCS401', 'BCS402', 'BCS403', 'BCS404', 'BCS405', 'BCS406'];
+      }
+      roomOptions = ['S-3', 'S-4'];
+    } else {
+      if (isElectronics) {
+        courseOptions = ['BEC201', 'BEC202', 'BEC203', 'BEC204', 'BEC205', 'BEC206'];
+      } else {
+        courseOptions = ['BCS201', 'BCS202', 'BCS203', 'BCS204', 'BCS205', 'BCS206'];
+      }
+      roomOptions = ['S-1', 'S-2'];
+    }
+    
+    const facultyOptions = ['NU', 'AKT', 'VT', 'KS', 'MY', 'AS', 'RS', 'PK', 'SM', 'DJ'];
+    
+    let courseIndex = 0;
+    let facultyIndex = 0;
+    let roomIndex = 0;
+    
+    Object.values(enhanced).forEach(dayData => {
+      Object.entries(dayData).forEach(([slot, slotData]) => {
+        if (slotData && slotData.courseName) {
+          // Rotate through different options to add variety
+          slotData.courseName = courseOptions[courseIndex % courseOptions.length];
+          slotData.facultyName = `(${facultyOptions[facultyIndex % facultyOptions.length]})`;
+          slotData.room = roomOptions[roomIndex % roomOptions.length];
+          
+          courseIndex++;
+          facultyIndex++;
+          roomIndex++;
+        }
+      });
+    });
+    
+    return enhanced;
+  };
+
+  // Validation function to check timetable variety and quality
+  const validateTimetableVariety = (timetable: TimetableData): { isValid: boolean; issues: string[] } => {
+    const issues: string[] = [];
+    
+    if (!timetable || Object.keys(timetable).length === 0) {
+      return { isValid: false, issues: ["No timetable data generated"] };
+    }
+    
+    const allCourses = new Set<string>();
+    const allFaculty = new Set<string>();
+    const allRooms = new Set<string>();
+    let totalSlots = 0;
+    let filledSlots = 0;
+    
+    Object.values(timetable).forEach(dayData => {
+      Object.values(dayData).forEach(slot => {
+        totalSlots++;
+        if (slot && slot.courseName) {
+          filledSlots++;
+          allCourses.add(slot.courseName);
+          allFaculty.add(slot.facultyName);
+          allRooms.add(slot.room);
+        }
+      });
+    });
+    
+    // Check for variety
+    if (allCourses.size < 2) {
+      issues.push("Only one unique course found - need more variety in subjects");
+    }
+    
+    if (allFaculty.size < 2) {
+      issues.push("Only one unique faculty found - need more variety in instructors");
+    }
+    
+    // Check classroom count (should be 1-2)
+    if (allRooms.size > 2) {
+      issues.push(`Too many classrooms used (${allRooms.size}) - should use only 1-2 classrooms per year/branch`);
+    }
+    
+    if (allRooms.size === 0) {
+      issues.push("No rooms assigned to classes");
+    }
+    
+    // Check for excessive repetition (more than 80% of slots have the same data)
+    if (filledSlots > 0) {
+      const courseCounts = new Map<string, number>();
+      const facultyCounts = new Map<string, number>();
+      const roomCounts = new Map<string, number>();
+      
+      Object.values(timetable).forEach(dayData => {
+        Object.values(dayData).forEach(slot => {
+          if (slot && slot.courseName) {
+            courseCounts.set(slot.courseName, (courseCounts.get(slot.courseName) || 0) + 1);
+            facultyCounts.set(slot.facultyName, (facultyCounts.get(slot.facultyName) || 0) + 1);
+            roomCounts.set(slot.room, (roomCounts.get(slot.room) || 0) + 1);
+          }
+        });
+      });
+      
+      const maxCourseCount = Math.max(...courseCounts.values());
+      const maxFacultyCount = Math.max(...facultyCounts.values());
+      const maxRoomCount = Math.max(...roomCounts.values());
+      
+      if (maxCourseCount / filledSlots > 0.8) {
+        issues.push("One course appears in more than 80% of slots - too repetitive");
+      }
+      
+      if (maxFacultyCount / filledSlots > 0.8) {
+        issues.push("One faculty appears in more than 80% of slots - too repetitive");
+      }
+      
+      if (maxRoomCount / filledSlots > 0.8) {
+        issues.push("One room appears in more than 80% of slots - too repetitive");
+      }
+    }
+    
+    // Check for proper scheduling (not too many empty slots)
+    const fillRate = filledSlots / totalSlots;
+    if (fillRate < 0.3) {
+      issues.push("Timetable has too many empty slots - consider adding more classes");
+    }
+    
+    return {
+      isValid: issues.length === 0,
+      issues
     };
   };
 
@@ -410,6 +748,7 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
     if (raw.data && typeof raw.data === 'object') timetableData = raw.data;
     
     const dayKeys = Object.keys(timetableData);
+    console.log("Day keys found:", dayKeys);
     
     // Process each canonical day
     canonicalDays.forEach(day => {
@@ -419,10 +758,34 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
       
       // Find matching day key case-insensitively
       const mapKey = findKeyInsensitive(day, dayKeys);
-      if (!mapKey || !timetableData[mapKey] || typeof timetableData[mapKey] !== 'object') return;
+      if (!mapKey || !timetableData[mapKey]) return;
       
       const dayObj = timetableData[mapKey];
+      console.log(`Processing ${day} (${mapKey}):`, dayObj, "Type:", typeof dayObj, "Is Array:", Array.isArray(dayObj));
+      
+      // Handle array format (AI sometimes returns arrays instead of objects)
+      if (Array.isArray(dayObj)) {
+        // Map array indices to time slots
+        dayObj.forEach((slotData, index) => {
+          if (index < canonicalSlots.length && slotData) {
+            const normalizedSlot = coerceSlot(slotData);
+            if (normalizedSlot) {
+              result[upperDay][canonicalSlots[index]] = {
+                courseName: normalizedSlot.courseName.trim().toUpperCase(),
+                facultyName: normalizedSlot.facultyName.trim().toUpperCase(),
+                room: normalizedSlot.room.trim().toUpperCase()
+              };
+            }
+          }
+        });
+        return;
+      }
+      
+      // Handle object format
+      if (typeof dayObj !== 'object') return;
+      
       const slotKeys = Object.keys(dayObj);
+      console.log(`Slot keys for ${day}:`, slotKeys);
       
       // Process each canonical time slot
       canonicalSlots.forEach(canonicalSlot => {
@@ -450,6 +813,7 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
       });
     });
     
+    console.log("Final normalized result:", result);
     return result;
   };
 
@@ -528,6 +892,10 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
               <Timetable 
                 data={isEditing ? editData : timetableData} 
                 editable={isEditing}
+                collegeName={user.organization?.name || "RAJKIYA ENGINEERING COLLEGE, SONBHARDRA"}
+                branch={timetableInfo.branch}
+                semester={timetableInfo.semester}
+                academicYear={timetableInfo.academicYear}
                 onChange={(day, slot, value) => {
                   setEditData(prev => {
                     const next: TimetableData = JSON.parse(JSON.stringify(prev || {}));

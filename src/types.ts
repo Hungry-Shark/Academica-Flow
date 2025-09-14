@@ -93,8 +93,7 @@ export interface Department {
 export interface StudentInfo {
   year: number;
   branch: string;
-  totalStudents: number;
-  sections: { [sectionName: string]: number };
+  numberOfStudents: number;
 }
 
 export interface RoomInfo {

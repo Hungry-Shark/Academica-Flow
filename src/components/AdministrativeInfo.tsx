@@ -143,17 +143,37 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
     });
   };
 
-  const addStudentInfo = () => {
-    if (!adminData) return;
+    const addStudentInfo = () => {
+    if (!adminData) {
+      // Initialize with empty admin data if none exists
+      const emptyData: AdministrativeData = {
+        sentiment: '',
+        departments: [],
+        faculties: [],
+        students: [],
+        subjects: [],
+        rooms: [],
+        lastUpdated: Date.now()
+      };
+      setAdminData(emptyData);
+      const newStudentInfo: StudentInfo = {
+        year: 1,
+        branch: '',
+        numberOfStudents: 0
+      };
+      emptyData.students = [newStudentInfo];
+      return;
+    }
+
     const newStudentInfo: StudentInfo = {
       year: 1,
       branch: '',
-      totalStudents: 0,
-      sections: { 'A': 0 }
+      numberOfStudents: 0
     };
+
     setAdminData({
       ...adminData,
-      students: [...adminData.students, newStudentInfo]
+      students: [...(adminData.students || []), newStudentInfo]
     });
   };
 
@@ -581,30 +601,55 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
                 )}
               </div>
               <div className="space-y-4">
-                {adminData?.students.map((student, index) => (
+                {(adminData?.students || []).map((student, index) => (
                   <div key={index} className="border rounded-lg p-4">
                     {isEditing ? (
                       <div className="space-y-2">
                         <input
                           type="number"
-                          value={student.year}
-                          onChange={(e) => updateItem('students', index.toString(), 'year', parseInt(e.target.value))}
+                          value={student.year || ''}
+                          onChange={(e) => {
+                            const value = e.target.value ? parseInt(e.target.value) : 1;
+                            if (adminData) {
+                              const students = [...adminData.students];
+                              students[index] = { ...students[index], year: value };
+                              setAdminData({ ...adminData, students });
+                            }
+                          }}
                           placeholder="Year"
+                          min="1"
+                          max="4"
                           className="w-full p-2 border rounded"
                         />
                         <input
                           type="text"
-                          value={student.branch}
-                          onChange={(e) => updateItem('students', index.toString(), 'branch', e.target.value)}
+                          value={student.branch || ''}
+                          onChange={(e) => {
+                            if (adminData) {
+                              const students = [...adminData.students];
+                              students[index] = { ...students[index], branch: e.target.value };
+                              setAdminData({ ...adminData, students });
+                            }
+                          }}
                           placeholder="Branch"
                           className="w-full p-2 border rounded"
                         />
                         <input
                           type="number"
-                          value={student.totalStudents}
-                          onChange={(e) => updateItem('students', index.toString(), 'totalStudents', parseInt(e.target.value))}
-                          placeholder="Total Students"
-                          className="w-full p-2 border rounded"
+                          value={student.numberOfStudents || 0}
+                          onChange={(e) => {
+                            if (adminData) {
+                              const students = [...adminData.students];
+                              students[index] = { 
+                                ...students[index], 
+                                numberOfStudents: parseInt(e.target.value) || 0 
+                              };
+                              setAdminData({ ...adminData, students });
+                            }
+                          }}
+                          placeholder="Number of Students"
+                          min="0"
+                          className="w-full p-2 border rounded focus:border-black focus:ring-1 focus:ring-black"
                         />
                         <button
                           onClick={() => deleteItem('students', index.toString())}
@@ -616,7 +661,7 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
                     ) : (
                       <div>
                         <h3 className="font-semibold">Year {student.year} - {student.branch}</h3>
-                        <p className="text-gray-600">Total Students: {student.totalStudents}</p>
+                        <p className="text-gray-600">Number of Students: {student.numberOfStudents || 0}</p>
                       </div>
                     )}
                   </div>
