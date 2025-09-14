@@ -34,7 +34,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
   return (
     <div className="font-['Poppins'] bg-white text-black min-h-screen flex flex-col">
       <Header onLogoClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} onLoginClick={onNavigateToLogin} isAuthenticated={isAuthenticated} onProfileClick={onProfileClick} />
-
+      
       {/* Menu Toggle */}
       <button
         onClick={toggleMenu}
@@ -80,6 +80,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
                 <li className={`my-5 transition-all duration-400 ease-in-out ${
                   isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
                 }`} style={{ transitionDelay: isMenuOpen ? '0.5s' : '0s' }}>
+                  <button onClick={() => { closeMenu(); document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }); }} className="cursor-pointer">
+                    <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400 font-wakanda">
+                      Contact
+                    </a>
+                  </button>
+                </li>
+                <li className={`my-5 transition-all duration-400 ease-in-out ${
+                  isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
+                }`} style={{ transitionDelay: isMenuOpen ? '0.6s' : '0s' }}>
                   <button onClick={() => { closeMenu(); onLogout && onLogout(); }} className="cursor-pointer">
                     <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-red-400 font-wakanda">
                       Logout
@@ -88,15 +97,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
                 </li>
               </>
             ) : (
-              <li className={`my-5 transition-all duration-400 ease-in-out ${
-                isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
-              }`} style={{ transitionDelay: isMenuOpen ? '0.4s' : '0s' }}>
-                <button onClick={() => { closeMenu(); onNavigateToLogin(); }} className="cursor-pointer">
-                  <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400 font-wakanda">
-                    Login
-                  </a>
-                </button>
-              </li>
+              <>
+                <li className={`my-5 transition-all duration-400 ease-in-out ${
+                  isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
+                }`} style={{ transitionDelay: isMenuOpen ? '0.4s' : '0s' }}>
+                  <button onClick={() => { closeMenu(); document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }); }} className="cursor-pointer">
+                    <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400 font-wakanda">
+                      Contact
+                    </a>
+                  </button>
+                </li>
+                <li className={`my-5 transition-all duration-400 ease-in-out ${
+                  isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
+                }`} style={{ transitionDelay: isMenuOpen ? '0.5s' : '0s' }}>
+                  <button onClick={() => { closeMenu(); onNavigateToLogin(); }} className="cursor-pointer">
+                    <a href="#" className="text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400 font-wakanda">
+                      Login
+                    </a>
+                  </button>
+                </li>
+              </>
             )}
           </ul>
         </nav>

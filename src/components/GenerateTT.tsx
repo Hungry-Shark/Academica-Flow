@@ -303,13 +303,36 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
   ];
 
   const normalizeTime = (t: string) => {
-    const m = t.trim().toLowerCase().replace(/[\u2012-\u2015]/g, '-').replace(/\s+/g, ' ')
-      .match(/^(\d{1,2})\s*:\s*(\d{2})\s*(am|pm)$/i);
-    if (!m) return t.trim().toLowerCase().replace(/\s+/g, ' ');
-    const hour = String(parseInt(m[1], 10));
-    const minutes = m[2];
-    const meridiem = m[3].toLowerCase();
-    return `${hour}:${minutes} ${meridiem}`;
+    // First clean up the string
+    const cleaned = t.trim().toLowerCase()
+      .replace(/[\u2012-\u2015]/g, '-') // Normalize different dash characters
+      .replace(/\s+/g, ' '); // Normalize spaces
+    
+    // Try to match different time formats
+    const formats = [
+      /^(\d{1,2})\s*:\s*(\d{2})\s*(am|pm)$/i,  // Standard format: 9:30 am
+      /^(\d{1,2})\.(\d{2})\s*(am|pm)$/i,       // Dot format: 9.30 am
+      /^(\d{1,2})\s*(\d{2})\s*(am|pm)$/i       // No separator: 930 am
+    ];
+    
+    for (const format of formats) {
+      const m = cleaned.match(format);
+      if (m) {
+        let hour = parseInt(m[1], 10);
+        const minutes = m[2].padStart(2, '0');
+        const meridiem = m[3].toLowerCase();
+        
+        // Ensure 12-hour time format
+        if (meridiem === 'pm' && hour < 12) hour += 12;
+        if (meridiem === 'am' && hour === 12) hour = 0;
+        
+        // Format back to standard format
+        hour = hour % 12 || 12; // Convert 24h to 12h format
+        return `${hour}:${minutes} ${meridiem}`;
+      }
+    }
+    
+    return cleaned; // Return cleaned string if no format matches
   };
 
   const normalizeSlot = (s: string) => {
@@ -331,46 +354,102 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
 
   const coerceSlot = (value: any): TimetableSlot | undefined => {
     if (!value || typeof value !== 'object') return undefined;
-    const course = value.courseName || value.course || value.subject || value.code || '';
-    const faculty = value.facultyName || value.faculty || value.teacher || value.instructor || '';
-    const room = value.room || value.location || value.lab || '';
+    
+    // Extract course name from various possible field names
+    const course = (
+      value.courseName ||
+      value.course ||
+      value.subject ||
+      value.subjectCode ||
+      value.code ||
+      ''
+    ).toString().trim();
+    
+    // Extract faculty name from various possible field names
+    const faculty = (
+      value.facultyName ||
+      value.faculty ||
+      value.teacher ||
+      value.instructor ||
+      value.prof ||
+      ''
+    ).toString().trim();
+    
+    // Extract room from various possible field names
+    const room = (
+      value.room ||
+      value.location ||
+      value.venue ||
+      value.lab ||
+      value.classroom ||
+      ''
+    ).toString().trim();
+    
+    // Only return if at least one field has content
     if (!course && !faculty && !room) return undefined;
-    return { courseName: String(course), facultyName: String(faculty), room: String(room) };
+    
+    // Format the fields according to the expected format
+    const formattedCourse = course.replace(/\s+/g, '').toUpperCase();
+    const formattedFaculty = faculty.replace(/[()]/g, '').trim().toUpperCase();
+    const formattedRoom = room.replace(/\s+/g, '-').toUpperCase();
+    
+    return {
+      courseName: formattedCourse,
+      facultyName: formattedFaculty ? `(${formattedFaculty})` : '',
+      room: formattedRoom
+    };
   };
 
   const normalizeTimetable = (raw: any): TimetableData => {
     const result: TimetableData = {} as TimetableData;
     if (!raw || typeof raw !== 'object') return result;
     
-    // Handle different JSON structures
+    // Handle different JSON structures and extract timetable data
     let timetableData = raw;
-    
-    // If the response has a 'timetable' property, use that
-    if (raw.timetable && typeof raw.timetable === 'object') {
-      timetableData = raw.timetable;
-    }
-    
-    // If the response has a 'data' property, use that
-    if (raw.data && typeof raw.data === 'object') {
-      timetableData = raw.data;
-    }
+    if (raw.timetable && typeof raw.timetable === 'object') timetableData = raw.timetable;
+    if (raw.data && typeof raw.data === 'object') timetableData = raw.data;
     
     const dayKeys = Object.keys(timetableData);
+    
+    // Process each canonical day
     canonicalDays.forEach(day => {
+      // Create empty day object
+      const upperDay = day.toUpperCase();
+      result[upperDay] = {};
+      
+      // Find matching day key case-insensitively
       const mapKey = findKeyInsensitive(day, dayKeys);
-      const dayObj = mapKey ? timetableData[mapKey] : undefined;
-      result[day.toUpperCase()] = {} as any;
-      if (dayObj && typeof dayObj === 'object') {
-        const slotKeys = Object.keys(dayObj);
-        canonicalSlots.forEach(slot => {
-          const k = findSlotKey(slot, slotKeys);
-          const val = k ? coerceSlot(dayObj[k]) : undefined;
-          if (val) {
-            (result[day.toUpperCase()] as any)[slot] = val;
-          }
+      if (!mapKey || !timetableData[mapKey] || typeof timetableData[mapKey] !== 'object') return;
+      
+      const dayObj = timetableData[mapKey];
+      const slotKeys = Object.keys(dayObj);
+      
+      // Process each canonical time slot
+      canonicalSlots.forEach(canonicalSlot => {
+        // Find matching slot with normalized time format
+        const slotKey = slotKeys.find(k => {
+          const normalizedCanonical = normalizeSlot(canonicalSlot);
+          const normalizedKey = normalizeSlot(k);
+          return normalizedCanonical === normalizedKey;
         });
-      }
+        
+        if (!slotKey) return;
+        
+        // Extract and validate slot data
+        const slotData = dayObj[slotKey];
+        if (!slotData || typeof slotData !== 'object') return;
+        
+        const normalizedSlot = coerceSlot(slotData);
+        if (normalizedSlot) {
+          result[upperDay][canonicalSlot] = {
+            courseName: normalizedSlot.courseName.trim().toUpperCase(),
+            facultyName: normalizedSlot.facultyName.trim().toUpperCase(),
+            room: normalizedSlot.room.trim().toUpperCase()
+          };
+        }
+      });
     });
+    
     return result;
   };
 
@@ -386,11 +465,6 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
         onWidthChange={setSidebarWidth}
       />
       <main className="flex-1 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 overflow-hidden">
-        <div className="lg:hidden">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-md text-black bg-white border border-black">
-            <Icon name="menu" className="w-6 h-6" />
-          </button>
-        </div>
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6 flex-1 min-h-0">
           <div className="lg:col-span-4 min-h-0 flex flex-col gap-4">
             <div className="flex justify-between items-center">

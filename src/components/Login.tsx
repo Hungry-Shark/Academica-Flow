@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from './Icons';
 import { AuthCredentials, UserProfile } from '../types';
 import { getFirebaseAuth, getGoogleProvider, createUserProfile, getUserProfile } from '../firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect } from 'firebase/auth';
+import { validatePassword, sanitizeInput, ValidationError, AuthError } from '../utils/validation';
 
 interface LoginProps {
   onEmailSignUp: (credentials: AuthCredentials) => void;
@@ -18,22 +19,55 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
   const [activeTab, setActiveTab] = useState<AuthTab>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordValidation, setPasswordValidation] = useState<{ isValid: boolean; errors: string[]; strength: 'weak' | 'medium' | 'strong' }>({
+    isValid: false,
+    errors: [],
+    strength: 'weak'
+  });
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeTab === 'signup' && password) {
+      const validation = validatePassword(password);
+      setPasswordValidation(validation);
+    }
+  }, [password, activeTab]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const auth = getFirebaseAuth();
+    setValidationError(null);
+
     try {
+      // Sanitize inputs
+      const sanitizedEmail = sanitizeInput(email);
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(sanitizedEmail)) {
+        throw new ValidationError('Please enter a valid email address');
+      }
+
+      // Additional password validation for signup
+      if (activeTab === 'signup') {
+        const validation = validatePassword(password);
+        if (!validation.isValid) {
+          throw new ValidationError(validation.errors[0]);
+        }
+      }
+
+      const auth = getFirebaseAuth();
+      
       if (activeTab === 'signin') {
-        await signInWithEmailAndPassword(auth, email, password);
-        onEmailSignIn({ email, password });
+        await signInWithEmailAndPassword(auth, sanitizedEmail, password);
+        onEmailSignIn({ email: sanitizedEmail, password });
       } else {
         // Create the Firebase auth user
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, sanitizedEmail, password);
         
         // Create the user profile in Firestore
         const newUserProfile: UserProfile = {
           uid: userCredential.user.uid,
-          email: email,
+          email: sanitizedEmail,
           name: '',  // Will be set in profile setup
           role: 'student',
           preferences: '',
@@ -42,10 +76,16 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
         };
         
         await createUserProfile(userCredential.user.uid, newUserProfile);
-        onEmailSignUp({ email, password });
+        onEmailSignUp({ email: sanitizedEmail, password });
       }
     } catch (err: any) {
-      alert(err.message);
+      if (err instanceof ValidationError) {
+        setValidationError(err.message);
+      } else if (err instanceof AuthError) {
+        setValidationError(err.message);
+      } else {
+        setValidationError(err.message || 'An unexpected error occurred');
+      }
     }
   };
 
@@ -72,6 +112,11 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
           <button onClick={() => setActiveTab('signin')} className={getTabClass('signin')}>Sign In</button>
           <button onClick={() => setActiveTab('signup')} className={getTabClass('signup')}>Sign Up</button>
         </div>
+        {validationError && (
+          <div className="bg-red-50 border border-red-500 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span className="block sm:inline">{validationError}</span>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="email" className="sr-only">Email</label>
@@ -85,7 +130,7 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
               placeholder="Email address"
             />
           </div>
-          <div>
+          <div className="space-y-2">
             <label htmlFor="password" className="sr-only">Password</label>
             <input
               id="password"
@@ -93,10 +138,38 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
-              className="w-full p-3 bg-white text-black placeholder:text-black/50 rounded-lg border border-black focus:ring-2 focus:ring-black outline-none transition"
+              minLength={8}
+              className={`w-full p-3 bg-white text-black placeholder:text-black/50 rounded-lg border ${
+                password && !passwordValidation.isValid ? 'border-red-500' : 'border-black'
+              } focus:ring-2 focus:ring-black outline-none transition`}
               placeholder="Password"
             />
+            {activeTab === 'signup' && password && (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="text-sm">Password Strength:</div>
+                  <div className="h-2 flex-1 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 ${
+                        passwordValidation.strength === 'strong'
+                          ? 'w-full bg-black'
+                          : passwordValidation.strength === 'medium'
+                          ? 'w-2/3 bg-gray-600'
+                          : 'w-1/3 bg-gray-400'
+                      }`}
+                    />
+                  </div>
+                  <div className="text-sm capitalize">{passwordValidation.strength}</div>
+                </div>
+                {passwordValidation.errors.length > 0 && (
+                  <ul className="text-sm text-red-500 list-disc list-inside">
+                    {passwordValidation.errors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
           <div>
             <button

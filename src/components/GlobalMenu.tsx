@@ -94,16 +94,19 @@ export const GlobalMenu: React.FC<GlobalMenuProps> = ({
                 <li className={`my-3 md:my-5 transition-all duration-400 ease-in-out ${
                   isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
                 }`} style={{ transitionDelay: isMenuOpen ? '0.6s' : '0s' }}>
-                  <button onClick={() => handleNavigation('ABOUT')} className="cursor-pointer w-full">
-                    <span className="text-2xl md:text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400 font-wakanda block py-2">
-                      About
-                    </span>
-                  </button>
-                </li>
-                <li className={`my-3 md:my-5 transition-all duration-400 ease-in-out ${
-                  isMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-5 opacity-0' 
-                }`} style={{ transitionDelay: isMenuOpen ? '0.7s' : '0s' }}>
-                  <button onClick={() => handleNavigation('CONTACT')} className="cursor-pointer w-full">
+                  <button 
+                    onClick={() => {
+                      closeMenu();
+                      handleNavigation('LANDING');
+                      setTimeout(() => {
+                        const contactSection = document.getElementById('contact');
+                        if (contactSection) {
+                          contactSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }, 100);
+                    }} 
+                    className="cursor-pointer w-full"
+                  >
                     <span className="text-2xl md:text-4xl text-white no-underline font-semibold transition-colors duration-300 hover:text-gray-400 font-wakanda block py-2">
                       Contact
                     </span>

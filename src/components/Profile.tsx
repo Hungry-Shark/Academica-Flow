@@ -39,21 +39,6 @@ export const Profile: React.FC<ProfileProps> = ({ user, onLogout, onNavigate }) 
         onNavigate={onNavigate as any}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Landing page style hamburger menu */}
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="fixed top-6 right-6 z-[1001] cursor-pointer w-8 h-6 flex flex-col justify-between lg:hidden"
-        >
-          <span className={`block w-full h-0.5 transition-all duration-300 ease-in-out origin-center ${
-            isSidebarOpen ? 'translate-y-2.5 rotate-45 bg-white' : 'bg-black'
-          }`}></span>
-          <span className={`block w-full h-0.5 bg-black transition-all duration-300 ease-in-out origin-center ${
-            isSidebarOpen ? 'opacity-0' : ''
-          }`}></span>
-          <span className={`block w-full h-0.5 transition-all duration-300 ease-in-out origin-center ${
-            isSidebarOpen ? '-translate-y-2.5 -rotate-45 bg-white' : 'bg-black'
-          }`}></span>
-        </button>
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 lg:p-8">
           <div className="max-w-3xl mx-auto">
             <h1 className="text-2xl font-bold text-gray-800 mb-6">Profile</h1>

@@ -228,55 +228,62 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
             <Icon name="menu" className="w-6 h-6" />
           </button>
         </div>
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+        <div className="mb-4">
           <h1 className="text-xl sm:text-2xl font-bold text-black">Administrative Information</h1>
-          {!user.organizationToken || user.organizationToken.trim() === '' ? (
-            <div className="text-red-600 text-sm">
+          {!user.organizationToken || user.organizationToken.trim() === '' && (
+            <div className="text-red-600 text-sm mt-2">
               ⚠️ Please set your organization token in Profile first
             </div>
-          ) : (
-          <div className="flex space-x-2 flex-shrink-0">
-            {isEditing ? (
-              <>
-                <button
-                  onClick={saveAdminData}
-                  className="px-3 py-2 sm:px-4 text-sm sm:text-base bg-green-600 text-white rounded-md hover:bg-green-700 transition"
-                >
-                  Save Changes
-                </button>
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="px-3 py-2 sm:px-4 text-sm sm:text-base bg-gray-500 text-white rounded-md hover:bg-gray-600 transition"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-3 py-2 sm:px-4 text-sm sm:text-base bg-black text-white rounded-md hover:bg-black/80 transition"
-              >
-                Edit
-              </button>
-            )}
-          </div>
           )}
         </div>
+        
+        <div className="flex flex-col space-y-4">
+        </div>
 
-        <div className="flex space-x-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-          {(['sentiment', 'departments', 'faculties', 'students', 'subjects', 'rooms'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-md transition whitespace-nowrap flex-shrink-0 ${
-                activeTab === tab
-                  ? 'bg-black text-white'
-                  : 'bg-gray-200 text-black hover:bg-gray-300'
-              }`}
-            >
-              {tab === 'sentiment' ? 'Sentiment' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
+            {(['sentiment', 'departments', 'faculties', 'students', 'subjects', 'rooms'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 rounded-md transition whitespace-nowrap flex-shrink-0 ${
+                  activeTab === tab
+                    ? 'bg-black text-white'
+                    : 'bg-gray-200 text-black hover:bg-gray-300'
+                }`}
+              >
+                {tab === 'sentiment' ? 'Sentiment' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
+          
+          {user.organizationToken && user.organizationToken.trim() !== '' && (
+            <div className="flex-shrink-0">
+              {isEditing ? (
+                <>
+                  <button
+                    onClick={saveAdminData}
+                    className="px-3 py-2 sm:px-4 text-sm sm:text-base bg-green-600 text-white rounded-md hover:bg-green-700 transition mr-2"
+                  >
+                    Save Changes
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="px-3 py-2 sm:px-4 text-sm sm:text-base bg-gray-500 text-white rounded-md hover:bg-gray-600 transition"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-3 py-2 sm:px-4 text-sm sm:text-base bg-black text-white rounded-md hover:bg-black/80 transition"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-auto">

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserProfile } from '../types';
 import { createOrganization, getOrganizationByToken } from '../firebase';
 import { Icon } from './Icons';
+import { sanitizeInput, ValidationError } from '../utils/validation';
 
 interface ProfileSetupProps {
   user: UserProfile;
@@ -17,86 +18,103 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, onNavi
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      setError('Please enter your name.');
-      return;
-    }
-    if (!role) {
-      setError('Please select a role.');
-      return;
-    }
-    if (!college.trim()) {
-      setError('Please enter your school/college name.');
-      return;
-    }
-    
-    if (role === 'admin') {
-      // Admin creates organization and gets token
-      try {
-        setIsCreatingOrg(true);
-        const token = await createOrganization(user.uid, college.trim());
-        setGeneratedToken(token);
-        setError(null);
-        onSave({ 
-          name: name.trim(), 
-          preferences: '', 
-          role, 
-          college: college.trim(),
-          organizationToken: token
-        });
-      } catch (error) {
-        console.error('Error creating organization:', error);
-        setError('Failed to create organization. Please try again.');
-      } finally {
-        setIsCreatingOrg(false);
+    try {
+      // Sanitize and validate inputs
+      const sanitizedName = sanitizeInput(name);
+      const sanitizedCollege = sanitizeInput(college);
+      const sanitizedToken = sanitizeInput(organizationToken);
+
+      if (!sanitizedName) {
+        throw new ValidationError('Please enter your name.');
       }
-    } else {
-      // Student/Faculty joins with token
-      if (!organizationToken.trim()) {
-        setError('Please enter the organization token provided by your admin.');
-        return;
+      if (!role) {
+        throw new ValidationError('Please select a role.');
       }
-      
-      try {
-        const organization = await getOrganizationByToken(organizationToken.trim());
+      if (!sanitizedCollege) {
+        throw new ValidationError('Please enter your school/college name.');
+      }
+
+      // Validate name length and format
+      if (sanitizedName.length < 2) {
+        throw new ValidationError('Name must be at least 2 characters long.');
+      }
+      if (!/^[a-zA-Z\s-']+$/.test(sanitizedName)) {
+        throw new ValidationError('Name can only contain letters, spaces, hyphens, and apostrophes.');
+      }
+
+      if (role === 'admin') {
+        // Admin creates organization and gets token
+        try {
+          setIsCreatingOrg(true);
+          const token = await createOrganization(user.uid, sanitizedCollege);
+          setGeneratedToken(token);
+          setError(null);
+          onSave({ 
+            name: sanitizedName, 
+            preferences: '', 
+            role, 
+            college: sanitizedCollege,
+            organizationToken: token
+          });
+        } finally {
+          setIsCreatingOrg(false);
+        }
+      } else {
+        // Student/Faculty joins with token
+        if (!sanitizedToken) {
+          throw new ValidationError('Please enter the organization token provided by your admin.');
+        }
+
+        // Validate token format (6 digits)
+        if (!/^\d{6}$/.test(sanitizedToken)) {
+          throw new ValidationError('Invalid token format. Token should be 6 digits.');
+        }
+        
+        const organization = await getOrganizationByToken(sanitizedToken);
         if (!organization) {
-          setError('Invalid organization token. Please check with your admin.');
-          return;
+          throw new ValidationError('Invalid organization token. Please check with your admin.');
         }
         
         setError(null);
         onSave({ 
-          name: name.trim(), 
+          name: sanitizedName, 
           preferences: '', 
           role, 
           college: organization.name,
-          organizationToken: organizationToken.trim()
+          organizationToken: sanitizedToken
         });
-      } catch (error) {
-        console.error('Error validating token:', error);
-        setError('Failed to validate organization token. Please try again.');
+      }
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        setError(err.message);
+      } else {
+        console.error('Error in profile setup:', err);
+        setError('An unexpected error occurred. Please try again.');
       }
     }
   };
 
   return (
     <div className="min-h-screen bg-white text-black flex flex-col p-4 sm:p-8">
-      {/* Hamburger menu button for mobile */}
-      <div className="lg:hidden mb-4 self-end">
-        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-md text-black bg-white border border-black">
-          <Icon name="menu" className="w-6 h-6" />
-        </button>
-      </div>
-      
       <div className="flex-1 flex items-center justify-center">
         <div className="max-w-md w-full mx-auto">
           <h1 className="text-2xl font-bold mb-6 text-center sm:text-left">Complete your profile</h1>
+          
+          {error && (
+            <div className="bg-red-50 border border-red-500 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+              <span className="block sm:inline">{error}</span>
+            </div>
+          )}
+        {error && (
+          <div className="bg-red-50 border border-red-500 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm mb-1">Email</label>
+            <label className="block text-sm mb-1 text-black">Email</label>
             <input value={user.email} readOnly className="w-full p-3 bg-gray-100 border border-black rounded text-black" />
           </div>
           <div>
