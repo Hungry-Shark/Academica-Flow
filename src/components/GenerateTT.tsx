@@ -8,7 +8,7 @@ import { Chat } from './Chat';
 import { Timetable } from './Timetable';
 import { UserProfile, ChatMessage, TimetableData, AdministrativeData, TimetableSlot } from '../types';
 import { Icon } from './Icons';
-import { setOrgTimetable, getAdministrativeData, getOrgTimetable, getAdminContextForOrg } from '../firebase';
+import { setOrgTimetable, getAdministrativeData, getOrgTimetable, getAdminContextForOrg, getOrganizationByToken } from '../firebase';
 
 interface GenerateTTProps {
   user: UserProfile;
@@ -407,13 +407,60 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
     setIsEditing(false);
   };
 
+  const handleSaveDraft = async () => {
+    if (!timetableData || !user.organizationToken) {
+      alert('Please generate a timetable and ensure your organization token is set in your profile.');
+      return;
+    }
+    try {
+      await setOrgTimetable(user.organizationToken, timetableData, false);
+      alert('Timetable saved as draft. Go to Dashboard to publish it when ready.');
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      alert('Failed to save draft. Please try again.');
+    }
+  };
+
   const handlePublish = async () => {
     if (!timetableData || !user.organizationToken) {
       alert('Please generate a timetable and ensure your organization token is set in your profile.');
       return;
     }
-    await setOrgTimetable(user.organizationToken, timetableData, false);
-    alert('Timetable saved successfully! Go to Dashboard to publish it for students and faculty.');
+    try {
+      setIsLoading(true);
+      
+      // Verify organization token first
+      const org = await getOrganizationByToken(user.organizationToken);
+      if (!org) {
+        throw new Error('Organization not found');
+      }
+      if (org.adminId !== user.uid) {
+        throw new Error('You are not authorized to publish timetables for this organization');
+      }
+      
+      // Try to publish the timetable
+      await setOrgTimetable(user.organizationToken, timetableData, true);
+      alert('Timetable published successfully! It is now visible to students and faculty on the Dashboard.');
+    } catch (error) {
+      console.error('Error publishing timetable:', error);
+      let errorMessage = 'Failed to publish timetable. ';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Missing or insufficient permissions')) {
+          errorMessage += 'Please ensure you have admin permissions.';
+        } else if (error.message.includes('Organization not found')) {
+          errorMessage += 'Please verify your organization token.';
+        } else if (error.message.includes('not authorized')) {
+          errorMessage += 'You do not have permission to publish timetables for this organization.';
+        } else {
+          errorMessage += 'An unexpected error occurred. Please try again.';
+        }
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDownloadPdf = () => {
@@ -842,6 +889,13 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
                     >
                       <Icon name="edit" className="w-4 h-4" />
                       <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={handleSaveDraft}
+                      className="flex items-center space-x-2 px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
+                    >
+                      <Icon name="save" className="w-4 h-4" />
+                      <span>Save Draft</span>
                     </button>
                     <button
                       onClick={handlePublish}

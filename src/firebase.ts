@@ -146,28 +146,39 @@ export async function getUserTimetable(userUid: string) {
 }
 
 // Organization-level timetable functions
-export async function setOrgTimetable(organizationToken: string, timetable: TimetableData, isPublished: boolean = false) {
+export async function setOrgTimetable(organizationToken: string, timetableData: TimetableData, isPublished: boolean) {
     if (!db) initializeFirebase();
     if (!auth?.currentUser) {
-        console.warn('User not authenticated, cannot save timetable');
-        return;
+        throw new Error('User not authenticated');
     }
+    
     try {
+        // First verify organization and permissions
         const organization = await getOrganizationByToken(organizationToken);
         if (!organization) {
             throw new Error('Organization not found');
         }
-        
         if (organization.adminId !== auth.currentUser.uid) {
-            throw new Error('Only organization admin can update timetable');
+            throw new Error('Unauthorized to update timetable');
         }
-        
-        const ref = doc(db, 'organizations', organization.id);
-        await setDoc(ref, { 
-            timetableData: timetable, 
-            isPublished: isPublished,
-            timetableUpdatedAt: Date.now() 
+
+        // Save timetable data in organization's collection
+        const timetableRef = doc(db, 'organizations', organizationToken);
+        await setDoc(timetableRef, {
+            timetableData,
+            lastUpdated: Date.now(),
+            isPublished,
+            adminId: auth.currentUser.uid
         }, { merge: true });
+
+        // Update user's organization document
+        const userRef = doc(db, 'users', auth.currentUser.uid);
+        await updateDoc(userRef, {
+            'organization.lastUpdated': Date.now(),
+            'organization.isPublished': isPublished
+        });
+
+        console.log('Timetable saved successfully');
     } catch (error) {
         console.error('Error saving timetable:', error);
         throw error;
@@ -210,12 +221,20 @@ export async function publishTimetable(organizationToken: string) {
             throw new Error('Only organization admin can publish timetable');
         }
         
-        // Update publish status in user's organization
+        // Update publish status in both user's organization and organization document
         const userRef = doc(db, 'users', auth.currentUser.uid);
-        await setDoc(userRef, { 
-            'organization.isPublished': true,
-            'organization.publishedAt': Date.now() 
-        }, { merge: true });
+        const orgRef = doc(db, 'organizations', organization.id);
+        
+        await Promise.all([
+            setDoc(userRef, { 
+                'organization.isPublished': true,
+                'organization.publishedAt': Date.now() 
+            }, { merge: true }),
+            setDoc(orgRef, { 
+                isPublished: true,
+                publishedAt: Date.now() 
+            }, { merge: true })
+        ]);
     } catch (error) {
         console.error('Error publishing timetable:', error);
         throw error;
@@ -313,17 +332,58 @@ export async function createOrganization(adminId: string, organizationName: stri
 
 export async function getOrganizationByToken(token: string): Promise<Organization | null> {
     if (!db) initializeFirebase();
+    if (!auth?.currentUser) {
+        throw new Error('User not authenticated');
+    }
+
     try {
-        const q = query(collection(db, 'users'), where('organization.token', '==', token));
-        const querySnapshot = await getDocs(q);
+        // First check in organizations collection
+        const orgRef = doc(db, 'organizations', token);
+        const orgDoc = await getDoc(orgRef);
+
+        if (orgDoc.exists()) {
+            const orgData = orgDoc.data();
+            return {
+                id: orgData.id || token,
+                name: orgData.name,
+                token: token,
+                adminId: orgData.adminId,
+                createdAt: orgData.createdAt,
+                administrativeData: orgData.administrativeData,
+                timetableData: orgData.timetableData,
+                isPublished: orgData.isPublished || false
+            } as Organization;
+        }
+
+        // If not found in organizations, check in users collection as fallback
+        const q = query(
+            collection(db, 'users'),
+            where('organization.token', '==', token),
+            limit(1)
+        );
         
+        const querySnapshot = await getDocs(q);
         if (querySnapshot.empty) {
+            console.warn('No organization found with token:', token);
             return null;
         }
-        
+
         const userDoc = querySnapshot.docs[0];
         const userData = userDoc.data();
-        return userData.organization as Organization;
+        
+        if (!userData.organization) {
+            console.warn('User document does not contain organization data');
+            return null;
+        }
+
+        return {
+            ...userData.organization,
+            id: userData.organization.id || token,
+            token: token,
+            adminId: userDoc.id,
+            createdAt: userData.organization.createdAt || Date.now(),
+            isPublished: false
+        } as Organization;
     } catch (error) {
         console.error('Error getting organization by token:', error);
         return null;
