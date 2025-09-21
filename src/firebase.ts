@@ -178,7 +178,6 @@ export async function setOrgTimetable(organizationToken: string, timetableData: 
             'organization.isPublished': isPublished
         });
 
-        console.log('Timetable saved successfully');
     } catch (error) {
         console.error('Error saving timetable:', error);
         throw error;
@@ -462,7 +461,6 @@ export async function setAdministrativeData(organizationToken: string, data: Adm
 export async function getAdministrativeData(organizationToken?: string | null) {
     if (!db) initializeFirebase();
     if (!organizationToken) {
-        console.log('getAdministrativeData: No organization token provided');
         return null;
     }
     if (!auth?.currentUser) {
@@ -470,28 +468,22 @@ export async function getAdministrativeData(organizationToken?: string | null) {
         return null;
     }
     try {
-        console.log('getAdministrativeData: Getting data for user:', auth.currentUser.uid, 'token:', organizationToken);
         // Get data from current user's organization (where it was saved)
         const userRef = doc(db, 'users', auth.currentUser.uid);
         const userDoc = await getDoc(userRef);
         
         if (!userDoc.exists()) {
-            console.log('getAdministrativeData: User document does not exist');
             return null;
         }
         
         const userData = userDoc.data();
-        console.log('getAdministrativeData: User data:', userData);
         const organization = userData.organization;
         
         // Verify the user has the correct organization token
         if (!organization || organization.token !== organizationToken) {
-            console.log('getAdministrativeData: Organization token mismatch or missing organization');
-            console.log('Expected token:', organizationToken, 'Found token:', organization?.token);
             return null;
         }
         
-        console.log('getAdministrativeData: Returning administrative data:', organization.administrativeData);
         return organization.administrativeData || null;
     } catch (error) {
         console.error('Error getting administrative data:', error);

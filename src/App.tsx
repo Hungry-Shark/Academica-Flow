@@ -17,6 +17,7 @@ import { GenerateTT } from './components/GenerateTT';
 import { AdministrativeInfo } from './components/AdministrativeInfo';
 import { GlobalMenu } from './components/GlobalMenu';
 import { sessionManager } from './utils/sessionManager';
+import { initializeSecurity } from './utils/security';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -26,6 +27,9 @@ const App: React.FC = () => {
   const [isNewSignup, setIsNewSignup] = useState(false);
 
   useEffect(() => {
+    // Initialize security measures
+    initializeSecurity();
+    
     const auth = getFirebaseAuth();
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       // Initialize session management when user logs in
