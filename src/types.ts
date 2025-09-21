@@ -28,6 +28,7 @@ export interface UserProfile {
   organizationToken?: string; // 6-digit token for students/faculty to join organization
   adminPassword?: string; // For administrative role verification
   organization?: Organization; // For admin users who own an organization
+  profileImageUrl?: string; // URL of the user's profile image
 }
 
 export interface Course {

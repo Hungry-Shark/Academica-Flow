@@ -15,9 +15,7 @@ export const Timetable: React.FC<TimetableProps> = ({ data, editable = false, on
   // Always show the structure, even if no data
   const showEmptyState = !data;
   
-  // Debug logging
-  console.log("Timetable component received data:", data);
-  console.log("Show empty state:", showEmptyState);
+  // Component state
 
   // Extract subjects from timetable data
   const extractSubjects = (timetableData: TimetableData | null) => {
@@ -215,17 +213,7 @@ export const Timetable: React.FC<TimetableProps> = ({ data, editable = false, on
                   const resolvedSlotKey = dayData ? findMatchingTimeKey(slot, Object.keys(dayData)) : undefined;
                   const slotData = resolvedSlotKey && dayData ? dayData[resolvedSlotKey] : undefined;
                   
-                  // Debug logging for first few slots
-                  if (day === 'MONDAY' && slot === '9:30 am-10:20 am') {
-                    console.log(`Debug for ${day} ${slot}:`, {
-                      resolvedDayKey,
-                      dayData,
-                      resolvedSlotKey,
-                      slotData,
-                      availableDayKeys: data ? Object.keys(data) : 'no data',
-                      availableSlotKeys: dayData ? Object.keys(dayData) : 'no dayData'
-                    });
-                  }
+                  // Process time slot data
                   return (
                     <td
                       key={`${day}-${slot}`}

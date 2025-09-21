@@ -3,6 +3,8 @@ import { UserProfile } from '../types';
 import { createOrganization, getOrganizationByToken } from '../firebase';
 import { Icon } from './Icons';
 import { sanitizeInput, ValidationError } from '../utils/validation';
+import { validateEmail } from '../utils/emailValidation';
+import { checkInstitutionExists, validateInstitutionName } from '../utils/institutionValidation';
 
 interface ProfileSetupProps {
   user: UserProfile;
@@ -18,6 +20,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, onNavi
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [organizationError, setOrganizationError] = useState<string | null>(null);
 
   const handleSave = async () => {
     try {
@@ -32,7 +35,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, onNavi
       if (!role) {
         throw new ValidationError('Please select a role.');
       }
-      if (!sanitizedCollege) {
+      if (role === 'admin' && !sanitizedCollege) {
         throw new ValidationError('Please enter your school/college name.');
       }
 
@@ -44,10 +47,38 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, onNavi
         throw new ValidationError('Name can only contain letters, spaces, hyphens, and apostrophes.');
       }
 
+      // Validate email
+      const emailValidation = await validateEmail(user.email);
+      if (!emailValidation.isValid) {
+        throw new ValidationError(emailValidation.message);
+      }
+
+      // For admin role, check if institution already exists
+      if (role === 'admin') {
+        // Validate institution name first
+        const institutionValidation = validateInstitutionName(sanitizedCollege);
+        if (!institutionValidation.isValid) {
+          throw new ValidationError(institutionValidation.message);
+        }
+
+        // Try to check if institution exists, but don't fail if check fails
+        try {
+          const institutionCheck = await checkInstitutionExists(sanitizedCollege);
+          if (institutionCheck.exists) {
+            setOrganizationError(institutionCheck.message);
+            return; // Stop execution and show error
+          }
+        } catch (error) {
+          console.warn('Could not verify institution uniqueness:', error);
+          // Continue with creation - the actual validation will happen during organization creation
+        }
+      }
+
       if (role === 'admin') {
         // Admin creates organization and gets token
         try {
           setIsCreatingOrg(true);
+          setOrganizationError(null); // Clear any previous errors
           const token = await createOrganization(user.uid, sanitizedCollege);
           setGeneratedToken(token);
           setError(null);
@@ -58,6 +89,12 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, onNavi
             college: sanitizedCollege,
             organizationToken: token
           });
+        } catch (createError: any) {
+          if (createError.message.includes('already exists')) {
+            setOrganizationError(createError.message);
+            return;
+          }
+          throw createError; // Re-throw other errors
         } finally {
           setIsCreatingOrg(false);
         }
@@ -107,11 +144,6 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, onNavi
               <span className="block sm:inline">{error}</span>
             </div>
           )}
-        {error && (
-          <div className="bg-red-50 border border-red-500 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <span className="block sm:inline">{error}</span>
-          </div>
-        )}
         <div className="space-y-4">
           <div>
             <label className="block text-sm mb-1 text-black">Email</label>
@@ -123,7 +155,10 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, onNavi
           </div>
           <div className="relative">
             <label className="block text-sm mb-1">Role</label>
-            <select value={role} onChange={(e) => setRole(e.target.value as any)} className="w-full p-3 bg-white border border-black rounded appearance-none relative z-10">
+            <select value={role} onChange={(e) => {
+              setRole(e.target.value as any);
+              setOrganizationError(null); // Clear organization error when role changes
+            }} className="w-full p-3 bg-white border border-black rounded appearance-none relative z-10">
               <option value="student">Student</option>
               <option value="faculty">Faculty</option>
               <option value="admin">Admin</option>
@@ -134,26 +169,36 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, onNavi
               </svg>
             </div>
           </div>
-          <div>
-            <label className="block text-sm mb-1">School/College Name</label>
-            <input 
-              value={college} 
-              onChange={(e) => setCollege(e.target.value)} 
-              className="w-full p-3 bg-white border border-black rounded" 
-              placeholder="Enter your institution name"
-            />
-          </div>
-          {role !== 'admin' && (
+          {role === 'admin' ? (
+            <div>
+              <label className="block text-sm mb-1">School/College Name</label>
+              <input 
+                value={college} 
+                onChange={(e) => {
+                  setCollege(e.target.value);
+                  setOrganizationError(null); // Clear error when user types
+                }} 
+                className={`w-full p-3 bg-white border rounded ${
+                  organizationError ? 'border-red-500' : 'border-black'
+                }`} 
+                placeholder="Enter your institution name"
+              />
+              {organizationError && (
+                <p className="text-red-600 text-sm mt-1">{organizationError}</p>
+              )}
+            </div>
+          ) : (
             <div>
               <label className="block text-sm mb-1">Organization Token</label>
               <input 
                 value={organizationToken} 
                 onChange={(e) => setOrganizationToken(e.target.value)} 
                 className="w-full p-3 bg-white border border-black rounded" 
-                placeholder="Enter 6-digit token from your admin"
-                maxLength={6}
+                placeholder="Enter 6-digit organization token"
               />
-              <p className="text-xs text-gray-600 mt-1">Ask your admin for the organization token</p>
+              <p className="text-sm text-gray-600 mt-1">
+                Get this token from your institution's admin
+              </p>
             </div>
           )}
           {role === 'admin' && generatedToken && (

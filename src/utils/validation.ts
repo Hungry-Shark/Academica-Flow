@@ -58,20 +58,35 @@ export function validatePassword(password: string): PasswordValidationResult {
 }
 
 export function sanitizeInput(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+  
   // Remove any HTML tags
   let sanitized = input.replace(/<[^>]*>/g, '');
   
-  // Remove any script tags and their contents
+  // Remove script tags and their contents
   sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
   
-  // Encode special characters
+  // Remove event handlers and javascript: URLs
+  sanitized = sanitized.replace(/on\w+\s*=\s*["'][^"']*["']/gi, '');
+  sanitized = sanitized.replace(/javascript:/gi, '');
+  sanitized = sanitized.replace(/data:/gi, '');
+  
+  // Remove potentially dangerous protocols
+  sanitized = sanitized.replace(/vbscript:/gi, '');
+  sanitized = sanitized.replace(/file:/gi, '');
+  sanitized = sanitized.replace(/ftp:/gi, '');
+  
+  // Encode special characters to prevent XSS
   sanitized = sanitized
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/\//g, '&#x2F;')
+    .replace(/\\/g, '&#x5C;')
+    .replace(/`/g, '&#x60;')
+    .replace(/=/g, '&#x3D;');
   
   return sanitized.trim();
 }

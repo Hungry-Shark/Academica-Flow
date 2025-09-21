@@ -14,16 +14,31 @@ interface SidebarProps {
 }
 
 const SidebarContent: React.FC<Pick<SidebarProps, 'user' | 'onLogout' | 'onNavigate'> & { isCollapsed: boolean }> = ({ user, onLogout, onNavigate, isCollapsed }) => (
-    <div className="flex flex-col h-screen bg-black text-white p-4">
-        <div className="flex-1">
+    <div className="flex flex-col min-h-screen max-h-screen bg-black text-white p-4 overflow-y-auto">
+        {/* Header Section - Fixed */}
+        <div className="flex-shrink-0">
             <div className={`mb-8 flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
                 <Icon name="logo" className="w-8 h-8 text-white" />
                 {!isCollapsed && <h1 className="text-xl font-bold font-wakanda">Academica Flow</h1>}
             </div>
+        </div>
+        
+        {/* Navigation Section - Scrollable */}
+        <div className="flex-1 overflow-y-auto">
             <div className="space-y-4">
                 <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} p-2 rounded-md`}>
-                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-black font-bold text-lg">
-                        {user.name.charAt(0).toUpperCase()}
+                    <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
+                        {user.profileImageUrl ? (
+                            <img 
+                                src={user.profileImageUrl} 
+                                alt="Profile" 
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-white flex items-center justify-center text-black font-bold text-lg">
+                                {user.name.charAt(0).toUpperCase()}
+                            </div>
+                        )}
                     </div>
                     {!isCollapsed && (
                         <div>
@@ -70,7 +85,9 @@ const SidebarContent: React.FC<Pick<SidebarProps, 'user' | 'onLogout' | 'onNavig
                 </button>
             </div>
         </div>
-        <div className="mt-auto">
+        
+        {/* Footer Section - Fixed */}
+        <div className="flex-shrink-0 mt-auto">
             <button
                 onClick={onLogout}
                 className={`w-full text-left p-3 rounded-md hover:bg-red-600/20 transition-colors flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} border-t border-white/10 pt-4`}

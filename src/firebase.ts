@@ -32,19 +32,19 @@ if (!firebaseConfig.projectId) {
 }
 
 // Initialize Firebase only when needed
-let auth;
-let googleProvider;
-let db;
+let app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+export const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+
+// Ensure persistence
+setPersistence(auth, browserLocalPersistence).catch(() => {/* noop */});
 
 export function initializeFirebase() {
     if (!getApps().length) {
-        const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
+        app = initializeApp(firebaseConfig);
         // Ensure persistence so auto-login works after refresh/new tab
         setPersistence(auth, browserLocalPersistence).catch(() => {/* noop */});
-        googleProvider = new GoogleAuthProvider();
-        // Improve connectivity in restrictive networks by forcing/auto-detecting long polling
-        db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 
         // Optional: use local emulators during development
         if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS === 'true') {

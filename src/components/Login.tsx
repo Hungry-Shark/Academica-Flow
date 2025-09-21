@@ -4,6 +4,8 @@ import { AuthCredentials, UserProfile } from '../types';
 import { getFirebaseAuth, getGoogleProvider, createUserProfile, getUserProfile } from '../firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { validatePassword, sanitizeInput, ValidationError, AuthError } from '../utils/validation';
+import { validateEmail } from '../utils/emailValidation';
+import { checkRateLimit, RATE_LIMITS } from '../utils/rateLimiter';
 
 interface LoginProps {
   onEmailSignUp: (credentials: AuthCredentials) => void;
@@ -25,6 +27,11 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
     strength: 'weak'
   });
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [emailValidation, setEmailValidation] = useState<{ isValid: boolean; message: string; isChecking: boolean }>({
+    isValid: false,
+    message: '',
+    isChecking: false
+  });
 
   useEffect(() => {
     if (activeTab === 'signup' && password) {
@@ -33,18 +40,63 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
     }
   }, [password, activeTab]);
 
+  // Real-time email validation for signup
+  useEffect(() => {
+    if (activeTab === 'signup' && email) {
+      const validateEmailAsync = async () => {
+        setEmailValidation(prev => ({ ...prev, isChecking: true }));
+        try {
+          const result = await validateEmail(email);
+          setEmailValidation({
+            isValid: result.isValid,
+            message: result.message,
+            isChecking: false
+          });
+        } catch (error) {
+          setEmailValidation({
+            isValid: false,
+            message: 'Unable to validate email',
+            isChecking: false
+          });
+        }
+      };
+
+      // Debounce the validation
+      const timeoutId = setTimeout(validateEmailAsync, 1000);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setEmailValidation({ isValid: false, message: '', isChecking: false });
+    }
+  }, [email, activeTab]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
 
     try {
+      // Check rate limit for login attempts
+      const rateLimitResult = checkRateLimit('LOGIN', sanitizeInput(email));
+      if (!rateLimitResult.allowed) {
+        throw new ValidationError(
+          `Too many login attempts. Please try again in ${Math.ceil(rateLimitResult.resetTime / 60000)} minutes.`
+        );
+      }
+
       // Sanitize inputs
       const sanitizedEmail = sanitizeInput(email);
       
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // Validate email format and existence
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(sanitizedEmail)) {
         throw new ValidationError('Please enter a valid email address');
+      }
+
+      // For signup, validate email format and basic checks
+      if (activeTab === 'signup') {
+        const emailValidationResult = await validateEmail(sanitizedEmail);
+        if (!emailValidationResult.isValid) {
+          throw new ValidationError(emailValidationResult.message);
+        }
       }
 
       // Additional password validation for signup
@@ -120,15 +172,45 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="email" className="sr-only">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full p-3 bg-white text-black placeholder:text-black/50 rounded-lg border border-black focus:ring-2 focus:ring-black outline-none transition"
-              placeholder="Email address"
-            />
+            <div className="relative">
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className={`w-full p-3 bg-white text-black placeholder:text-black/50 rounded-lg border ${
+                  activeTab === 'signup' && email && !emailValidation.isValid && !emailValidation.isChecking
+                    ? 'border-red-500'
+                    : activeTab === 'signup' && email && emailValidation.isValid
+                    ? 'border-green-500'
+                    : 'border-black'
+                } focus:ring-2 focus:ring-black outline-none transition`}
+                placeholder="Email address"
+              />
+              {activeTab === 'signup' && email && emailValidation.isChecking && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
+                </div>
+              )}
+              {activeTab === 'signup' && email && !emailValidation.isChecking && emailValidation.isValid && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <Icon name="check" className="w-4 h-4 text-green-500" />
+                </div>
+              )}
+              {activeTab === 'signup' && email && !emailValidation.isChecking && !emailValidation.isValid && emailValidation.message && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <Icon name="close" className="w-4 h-4 text-red-500" />
+                </div>
+              )}
+            </div>
+            {activeTab === 'signup' && email && !emailValidation.isChecking && emailValidation.message && (
+              <div className={`text-sm mt-1 ${
+                emailValidation.isValid ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {emailValidation.message}
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <label htmlFor="password" className="sr-only">Password</label>
@@ -174,9 +256,27 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
           <div>
             <button
               type="submit"
-              className="w-full py-3 px-4 border border-transparent rounded-lg text-sm font-medium text-white bg-black hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+              disabled={
+                activeTab === 'signup' && (
+                  emailValidation.isChecking || 
+                  (email && !emailValidation.isValid) ||
+                  !passwordValidation.isValid
+                )
+              }
+              className={`w-full py-3 px-4 border border-transparent rounded-lg text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black ${
+                activeTab === 'signup' && (
+                  emailValidation.isChecking || 
+                  (email && !emailValidation.isValid) ||
+                  !passwordValidation.isValid
+                )
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-black hover:bg-black/80'
+              }`}
             >
               {activeTab === 'signin' ? 'Sign In' : 'Create Account'}
+              {activeTab === 'signup' && emailValidation.isChecking && (
+                <span className="ml-2">Validating...</span>
+              )}
             </button>
           </div>
         </form>

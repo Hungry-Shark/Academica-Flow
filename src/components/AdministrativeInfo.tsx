@@ -25,9 +25,7 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
   const loadAdminData = async () => {
     setLoading(true);
     try {
-      console.log('Loading admin data for organization token:', user.organizationToken);
       if (!user.organizationToken) {
-        console.log('No organization token found');
         // Initialize with empty data if no organization token
         const emptyData: AdministrativeData = {
           departments: [],
@@ -43,13 +41,10 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
       }
 
       const data = await getAdministrativeData(user.organizationToken);
-      console.log('Loaded administrative data:', data);
       if (data) {
         setAdminData(data);
-        console.log('Setting sentiment to:', data.sentiment);
         setSentiment(data.sentiment || '');
       } else {
-        console.log('No data returned, initializing with empty data');
         // Initialize with empty data
         const emptyData: AdministrativeData = {
           departments: [],
@@ -80,14 +75,12 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
 
   const saveAdminData = async () => {
     if (!user.organizationToken || user.organizationToken.trim() === '' || !adminData) {
-      console.error('Cannot save: missing organization token or admin data', { organizationToken: user.organizationToken, hasAdminData: !!adminData });
+      console.error('Cannot save: missing organization token or admin data');
       alert('Error: Please set your organization token in your profile before saving administrative data.');
       return;
     }
 
     try {
-      console.log('Saving administrative data for organization token:', user.organizationToken);
-      console.log('Data to save:', adminData);
       
       // Update the lastUpdated timestamp
       const dataToSave = {
@@ -97,7 +90,6 @@ export const AdministrativeInfo: React.FC<AdministrativeInfoProps> = ({ user, on
       };
       
       await setAdministrativeData(user.organizationToken, dataToSave as AdministrativeData);
-      console.log('Administrative data saved successfully');
       
       // Update local state with the saved data
       setAdminData(dataToSave as AdministrativeData);

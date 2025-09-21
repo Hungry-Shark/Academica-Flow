@@ -265,22 +265,232 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, set
                 </div>
               </div>
             </div>
+
+            {/* NEP 2020 Integration Section */}
+            <div className="mt-16 relative py-12 bg-white">
+              <div className="max-w-6xl mx-auto px-4">
+                <h3 className="text-4xl lg:text-5xl font-bold mb-12 text-center text-black">
+                  NEP 2020 Policy Implementation
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
+                  <div className="bg-white p-8 border border-black transition-all duration-300">
+                    <h4 className="text-2xl font-semibold mb-2 text-black text-center">Policy Highlights</h4>
+                    <hr className="border-t border-gray-300 mb-8" />
+                    <div className="space-y-6">
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-black group-hover:text-black transition-all duration-300 pb-2">
+                          <span>5+3+3+4 academic structure support</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-500 ease-in-out" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-500 ease-in-out max-h-0 group-hover:max-h-32">
+                          <p className="text-gray-800 mt-3 pl-4 text-base opacity-0 group-hover:opacity-100 transition-opacity duration-500 pb-2">
+                            Supports the new pedagogical and curricular restructuring from Foundational to Secondary stages, ensuring holistic development at each level.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-gray-800 hover:text-blue-500 transition-colors duration-200">
+                          <span>Choice-based credit system (CBCS)</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-200 max-h-0 group-hover:max-h-96">
+                          <p className="text-gray-600 mt-2 pl-4">
+                            Enables students to choose their learning paths, combining core and elective courses across disciplines for a personalized education journey.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-gray-800 hover:text-blue-500 transition-colors duration-200">
+                          <span>Flexible multidisciplinary course enrollment</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-200 max-h-0 group-hover:max-h-96">
+                          <p className="text-gray-600 mt-2 pl-4">
+                            Students can enroll in courses across different disciplines, promoting a multidisciplinary approach to education and skill development.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-gray-800 hover:text-blue-500 transition-colors duration-200">
+                          <span>Mother tongue/local language integration</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-200 max-h-0 group-hover:max-h-96">
+                          <p className="text-gray-600 mt-2 pl-4">
+                            Supports scheduling of courses in regional languages and mother tongue, promoting better understanding and cultural connection.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-gray-800 hover:text-blue-500 transition-colors duration-200">
+                          <span>Multiple entry/exit points</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-200 max-h-0 group-hover:max-h-96">
+                          <p className="text-gray-600 mt-2 pl-4">
+                            Facilitates flexible program completion with multiple entry and exit options, allowing students to pause and resume their education as needed.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-gray-800 hover:text-blue-500 transition-colors duration-200">
+                          <span>Project work and internship scheduling</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-200 max-h-0 group-hover:max-h-96">
+                          <p className="text-gray-600 mt-2 pl-4">
+                            Integrates practical experience through projects and internships into the academic schedule, ensuring hands-on learning opportunities.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-8 border border-black transition-all duration-300">
+                    <h4 className="text-2xl font-semibold mb-2 text-black text-center">Our Implementation</h4>
+                    <hr className="border-t border-gray-300 mb-8" />
+                    <div className="space-y-6">
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-black group-hover:text-black transition-all duration-300 pb-2">
+                          <span>Dynamic multidisciplinary timetables</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-500 ease-in-out" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-500 ease-in-out max-h-0 group-hover:max-h-32">
+                          <p className="text-gray-800 mt-3 pl-4 text-base opacity-0 group-hover:opacity-100 transition-opacity duration-500 pb-2">
+                            AI-powered scheduling system that automatically creates conflict-free timetables across multiple disciplines and departments.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-gray-800 hover:text-green-500 transition-colors duration-200">
+                          <span>Automated credit tracking system</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-200 max-h-0 group-hover:max-h-96">
+                          <p className="text-gray-600 mt-2 pl-4">
+                            Intelligent system that tracks and manages credits across different courses and programs, ensuring compliance with degree requirements.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-gray-800 hover:text-green-500 transition-colors duration-200">
+                          <span>Cross-departmental enrollment support</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-200 max-h-0 group-hover:max-h-96">
+                          <p className="text-gray-600 mt-2 pl-4">
+                            Seamless enrollment process for courses across different departments, with automatic conflict resolution and capacity management.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-gray-800 hover:text-green-500 transition-colors duration-200">
+                          <span>Flexible scheduling for multiple programs</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-200 max-h-0 group-hover:max-h-96">
+                          <p className="text-gray-600 mt-2 pl-4">
+                            Adaptive scheduling system that accommodates multiple program requirements while maintaining flexibility for student choices.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-gray-800 hover:text-green-500 transition-colors duration-200">
+                          <span>Real-time course mapping</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-200 max-h-0 group-hover:max-h-96">
+                          <p className="text-gray-600 mt-2 pl-4">
+                            Dynamic visualization of course relationships and prerequisites, helping students plan their academic journey effectively.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="group cursor-pointer">
+                        <div className="flex items-center text-lg text-gray-800 hover:text-green-500 transition-colors duration-200">
+                          <span>Comprehensive progress tracking</span>
+                          <svg className="w-5 h-5 ml-2 transform group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        <div className="overflow-hidden transition-all duration-200 max-h-0 group-hover:max-h-96">
+                          <p className="text-gray-600 mt-2 pl-4">
+                            Detailed tracking of academic progress, credit accumulation, and completion status across multiple programs and disciplines.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section id="contact" className="py-12 sm:py-16 lg:py-20 px-4 bg-gray-50">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-8">Get in Touch</h2>
-            <p className="text-base sm:text-lg text-gray-600 mb-6 sm:mb-8">
-              Ready to transform your academic scheduling? Contact us to learn more about 
-              implementing Academica Flow in your institution.
-            </p>
-            <button
-              onClick={() => setShowQueryForm(true)}
-              className="px-6 sm:px-8 py-3 sm:py-4 bg-black text-white rounded-lg text-base sm:text-lg font-semibold hover:bg-gray-800 transition-colors duration-300"
-            >
-              Any Questions?
-            </button>
+        <section id="contact" className="py-12 sm:py-16 lg:py-20 px-4 bg-white">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+              {/* Text Content */}
+              <div className="lg:w-1/2 text-center lg:text-left">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6 sm:mb-8">Get in Touch</h2>
+                <p className="text-base sm:text-lg text-gray-800 mb-6 sm:mb-8">
+                  Ready to transform your academic scheduling? Contact us to learn more about 
+                  implementing Academica Flow in your institution.
+                </p>
+                <button
+                  onClick={() => setShowQueryForm(true)}
+                  className="px-6 sm:px-8 py-3 sm:py-4 bg-black text-white rounded-lg text-base sm:text-lg font-semibold hover:bg-gray-800 transition-colors duration-300"
+                >
+                  Any Questions?
+                </button>
+              </div>
+              
+              {/* Image */}
+              <div className="lg:w-1/2 flex justify-center lg:justify-end">
+                <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96 relative">
+                  <img 
+                    src="/images/contact.png" 
+                    alt="Contact us illustration" 
+                    className="w-full h-full object-contain animate-float-slow"
+                    style={{ 
+                      filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.1))',
+                      animationDelay: '0.5s'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

@@ -105,7 +105,7 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
         ]);
         setAdminContext(adminData);
         setExistingOrgTT(existingTT);
-        console.log('Loaded admin context for timetable generation:', adminData);
+        // Loaded admin context for timetable generation
       } catch (error) {
         console.warn('Could not load admin context:', error);
         // Continue without admin context - user can still generate timetables
@@ -341,13 +341,10 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
 
       try {
         const raw: unknown = parseTimetableJSON(timetableJsonString);
-        console.log("Raw parsed JSON:", raw);
         const normalized = normalizeTimetable(raw);
-        console.log("Normalized timetable:", normalized);
         
         // Validate timetable variety
         const validationResult = validateTimetableVariety(normalized);
-        console.log("Timetable validation:", validationResult);
         
         if (!validationResult.isValid) {
           console.warn("Generated timetable lacks variety:", validationResult.issues);
@@ -357,7 +354,6 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
           const enhancedValidation = validateTimetableVariety(enhancedTimetable);
           
           if (enhancedValidation.isValid) {
-            console.log("Enhanced timetable with better variety");
             setTimetableData(enhancedTimetable);
             setEditData(enhancedTimetable);
             setMessages(prev => [...prev, { 
@@ -374,12 +370,11 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
           }
         } else {
           setMessages(prev => [...prev, { sender: 'model', text: "Here is your generated timetable. You can preview it, edit it, or generate a new one." }]);
-          console.log("Setting timetable data to state:", normalized);
           setTimetableData(normalized);
           setEditData(normalized);
         }
       } catch (e) {
-        console.error("Failed to parse timetable JSON:", e, "Received:", timetableJsonString);
+        console.error("Failed to parse timetable JSON");
         setMessages(prev => [...prev, { sender: 'model', text: "I had trouble structuring the timetable. Could you try rephrasing your request?" }]);
       }
     } catch (error) {
@@ -795,7 +790,6 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
     if (raw.data && typeof raw.data === 'object') timetableData = raw.data;
     
     const dayKeys = Object.keys(timetableData);
-    console.log("Day keys found:", dayKeys);
     
     // Process each canonical day
     canonicalDays.forEach(day => {
@@ -808,7 +802,6 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
       if (!mapKey || !timetableData[mapKey]) return;
       
       const dayObj = timetableData[mapKey];
-      console.log(`Processing ${day} (${mapKey}):`, dayObj, "Type:", typeof dayObj, "Is Array:", Array.isArray(dayObj));
       
       // Handle array format (AI sometimes returns arrays instead of objects)
       if (Array.isArray(dayObj)) {
@@ -832,7 +825,6 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
       if (typeof dayObj !== 'object') return;
       
       const slotKeys = Object.keys(dayObj);
-      console.log(`Slot keys for ${day}:`, slotKeys);
       
       // Process each canonical time slot
       canonicalSlots.forEach(canonicalSlot => {
@@ -860,7 +852,6 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
       });
     });
     
-    console.log("Final normalized result:", result);
     return result;
   };
 

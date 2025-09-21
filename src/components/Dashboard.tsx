@@ -150,16 +150,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
 
 
   return (
-    <div className="flex h-screen bg-white">
-      <Sidebar user={user} onLogout={onLogout} isOpen={isSidebarOpen} setOpen={setSidebarOpen} onNavigate={onNavigate} />
-      <main className="flex-1 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6">
+    <div className="flex min-h-screen bg-white">
+      <div className="hidden lg:block lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:w-64">
+        <Sidebar user={user} onLogout={onLogout} isOpen={isSidebarOpen} setOpen={setSidebarOpen} onNavigate={onNavigate} />
+      </div>
+      <main className="flex-1 flex flex-col p-4 lg:p-6 gap-4 lg:gap-6 lg:ml-64 overflow-y-auto">
         <div className="lg:hidden">
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-md text-black bg-white border border-black">
             <Icon name="menu" className="w-6 h-6" />
           </button>
         </div>
-        
-
         <div className="flex flex-col gap-4 lg:gap-6 flex-1 min-h-0">
           {/* Organization Status Section */}
           <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -186,7 +186,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
                 )}
               </div>
             </div>
-            
             {!isPublished && user.role !== 'admin' && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <div className="flex items-center space-x-2">
@@ -198,7 +197,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
                 </p>
               </div>
             )}
-            
             {!timetableData && user.role === 'admin' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center space-x-2">
@@ -211,7 +209,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
               </div>
             )}
           </div>
-
           {/* Main Timetable Layout (read-only) */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6 flex-1 min-h-0">
             <div className="lg:col-span-4 min-h-0 flex flex-col gap-4">

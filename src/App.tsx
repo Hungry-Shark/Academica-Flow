@@ -1,5 +1,6 @@
 // FIX: Create the main App component
 import React, { useState, useEffect } from 'react';
+import { logger } from './utils/logger';
 import { getFirebaseAuth, createUserProfile, getUserProfile, checkUserProfileExists, getFirestoreDb } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -15,6 +16,7 @@ import { Profile } from './components/Profile';
 import { GenerateTT } from './components/GenerateTT';
 import { AdministrativeInfo } from './components/AdministrativeInfo';
 import { GlobalMenu } from './components/GlobalMenu';
+import { sessionManager } from './utils/sessionManager';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -26,6 +28,12 @@ const App: React.FC = () => {
   useEffect(() => {
     const auth = getFirebaseAuth();
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      // Initialize session management when user logs in
+      if (firebaseUser) {
+        sessionManager.extendSession();
+      } else {
+        sessionManager.cleanup();
+      }
       if (firebaseUser) {
         // Get user profile from Firestore
         const userProfile = await getUserProfile(firebaseUser.uid);
@@ -96,6 +104,16 @@ const App: React.FC = () => {
       }
     } else {
       setAppView('LOGIN');
+    }
+  };
+
+  const refreshUserProfile = async () => {
+    const auth = getFirebaseAuth();
+    if (auth.currentUser && user) {
+      const updatedProfile = await getUserProfile(auth.currentUser.uid);
+      if (updatedProfile) {
+        setUser(updatedProfile);
+      }
     }
   };
 
@@ -172,9 +190,9 @@ const App: React.FC = () => {
         return <Dashboard user={user!} onLogout={handleLogout} isAdmin={user?.role === 'admin'} onNavigate={saveCurrentView} />;
       
       case 'PROFILE':
-        return <Profile user={user!} onLogout={handleLogout} onNavigate={saveCurrentView} />;
+        return <Profile user={user!} onLogout={handleLogout} onNavigate={saveCurrentView} onProfileUpdate={refreshUserProfile} />;
       case 'PROFILE_EDIT':
-        return <Profile user={user!} onLogout={handleLogout} onNavigate={saveCurrentView} />;
+        return <Profile user={user!} onLogout={handleLogout} onNavigate={saveCurrentView} onProfileUpdate={refreshUserProfile} />;
       case 'GENERATE_TT':
         return <GenerateTT user={user!} onLogout={handleLogout} onNavigate={saveCurrentView} />;
       case 'ADMIN_INFO':
