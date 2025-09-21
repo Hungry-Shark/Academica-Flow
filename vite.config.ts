@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
     const isProduction = mode === 'production';
     
     return {
+      base: '/',
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
@@ -19,9 +20,16 @@ export default defineConfig(({ mode }) => {
         postcss: './postcss.config.js',
       },
       build: {
+        outDir: 'dist',
+        assetsDir: 'assets',
         minify: 'esbuild',
         esbuild: {
           drop: isProduction ? ['console', 'debugger'] : [],
+        },
+        rollupOptions: {
+          output: {
+            manualChunks: undefined,
+          },
         },
       },
       server: {
