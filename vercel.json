@@ -26,9 +26,22 @@
           "value": "cross-origin"
         }
       ]
+    },
+    {
+      "source": "/_/auth/handler",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
     }
   ],
   "rewrites": [
+    {
+      "source": "/_/auth/handler",
+      "destination": "/index.html"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

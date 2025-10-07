@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Icon } from './Icons';
 import { AuthCredentials, UserProfile } from '../types';
 import { getFirebaseAuth, getGoogleProvider, createUserProfile, getUserProfile } from '../firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { validatePassword, sanitizeInput, ValidationError, AuthError } from '../utils/validation';
 import { validateEmail } from '../utils/emailValidation';
 import { checkRateLimit, RATE_LIMITS } from '../utils/rateLimiter';
@@ -39,6 +39,41 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
       setPasswordValidation(validation);
     }
   }, [password, activeTab]);
+
+  // Handle Google OAuth redirect result
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      const auth = getFirebaseAuth();
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          // Check if user already exists
+          const existingProfile = await getUserProfile(result.user.uid);
+          
+          if (!existingProfile) {
+            // New Google user - create profile
+            const newUserProfile: UserProfile = {
+              uid: result.user.uid,
+              email: result.user.email || '',
+              name: result.user.displayName || '',
+              role: 'student',
+              preferences: '',
+              profileComplete: false,
+              profileCompleted: false,
+            };
+            await createUserProfile(result.user.uid, newUserProfile);
+            onGoogleSignIn(true); // Mark as new user
+          } else {
+            onGoogleSignIn(false); // Mark as existing user
+          }
+        }
+      } catch (error) {
+        console.error('Error handling redirect result:', error);
+      }
+    };
+
+    handleRedirectResult();
+  }, [onGoogleSignIn]);
 
   // Real-time email validation for signup
   useEffect(() => {
@@ -290,34 +325,20 @@ export const Login: React.FC<LoginProps> = ({ onEmailSignUp, onEmailSignIn, onGo
             const auth = getFirebaseAuth();
             const googleProvider = getGoogleProvider();
             try {
-              const result = await signInWithPopup(auth, googleProvider);
+              console.log('Starting Google sign-in redirect...');
+              console.log('Auth domain:', auth.app.options.authDomain);
+              console.log('Project ID:', auth.app.options.projectId);
               
-              // Check if user already exists
-              const existingProfile = await getUserProfile(result.user.uid);
-              
-              if (!existingProfile) {
-                // New Google user - create profile
-                const newUserProfile: UserProfile = {
-                  uid: result.user.uid,
-                  email: result.user.email || '',
-                  name: result.user.displayName || '',
-                  role: 'student',
-                  preferences: '',
-                  profileComplete: false,
-                  profileCompleted: false,
-                };
-                await createUserProfile(result.user.uid, newUserProfile);
-                onGoogleSignIn(true); // Mark as new user
-              } else {
-                onGoogleSignIn(false); // Mark as existing user
+              // Try popup first, fallback to redirect
+              try {
+                await signInWithPopup(auth, googleProvider);
+              } catch (popupError: any) {
+                console.log('Popup failed, trying redirect:', popupError.message);
+                await signInWithRedirect(auth, googleProvider);
               }
             } catch (err: any) {
-              // Fallback to redirect for environments where popups are blocked or third-party cookies are disabled
-              if (err?.code && typeof err.code === 'string' && (err.code.includes('popup') || err.code.includes('network'))) {
-                await signInWithRedirect(auth, googleProvider);
-                return;
-              }
-              alert(err.message || 'Google sign-in failed');
+              console.error('Google sign-in error:', err);
+              alert(`Google sign-in failed: ${err.message || 'Unknown error'}`);
             }
           }}
           className="w-full flex items-center justify-center py-3 px-4 border border-black rounded-lg text-sm font-medium text-black bg-white hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-colors"

@@ -1,0 +1,771 @@
+// NEP 2020 Compliant Timetable System Database Schema
+// Multi-tenant, choice-based credit system with comprehensive constraint management
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================
+// CORE ORGANIZATIONAL STRUCTURE
+// ================================
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  type        OrgType  @default(UNIVERSITY)
+  address     String?
+  website     String?
+  phone       String?
+  email       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // NEP 2020 specific settings
+  nepSettings NepSettings?
+  
+  // Relationships
+  departments    Department[]
+  faculties      Faculty[]
+  students       Student[]
+  subjects       Subject[]
+  rooms          Room[]
+  timeSlots      TimeSlot[]
+  constraints    Constraint[]
+  timetables     Timetable[]
+  academicYears  AcademicYear[]
+  semesters      Semester[]
+  
+  @@map("organizations")
+}
+
+model NepSettings {
+  id             String @id @default(cuid())
+  organizationId String @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // NEP 2020 Compliance Settings
+  corePercentage     Int     @default(60)  // 60% core subjects
+  electivePercentage Int     @default(30)  // 30% elective subjects
+  skillPercentage    Int     @default(10)  // 10% skill-based subjects
+  
+  // Credit System
+  minCreditsPerSemester Int @default(20)
+  maxCreditsPerSemester Int @default(30)
+  totalCreditsForDegree Int @default(160) // 4 years * 40 credits average
+  
+  // Assessment
+  continuousAssessmentWeight Int @default(40) // 40% continuous assessment
+  endSemesterExamWeight      Int @default(60) // 60% end semester exam
+  
+  // Workload
+  maxFacultyHoursPerWeek Int @default(40)
+  minFacultyHoursPerWeek Int @default(20)
+  
+  // Flexibility
+  allowCrossDepartmentElectives Boolean @default(true)
+  allowInterDisciplinaryCourses  Boolean @default(true)
+  allowOnlineCourses            Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("nep_settings")
+}
+
+enum OrgType {
+  UNIVERSITY
+  COLLEGE
+  INSTITUTE
+  SCHOOL
+}
+
+// ================================
+// ACADEMIC STRUCTURE
+// ================================
+
+model AcademicYear {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  year           String   // e.g., "2024-25"
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean  @default(true)
+  
+  // Relationships
+  semesters      Semester[]
+  timetables     Timetable[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([organizationId, year])
+  @@map("academic_years")
+}
+
+model Semester {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  
+  name           String   // e.g., "Odd Semester", "Even Semester"
+  number         Int      // 1, 2, 3, 4, 5, 6, 7, 8
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean  @default(true)
+  
+  // Relationships
+  timetables     Timetable[]
+  enrollments    Enrollment[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([organizationId, academicYearId, number])
+  @@map("semesters")
+}
+
+model Department {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  name           String
+  code           String   // e.g., "CSE", "ECE", "ME"
+  description    String?
+  hodId          String?  // Head of Department
+  hod            Faculty? @relation("DepartmentHOD", fields: [hodId], references: [id])
+  
+  // NEP 2020 Categories
+  nepCategories  NepCategory[]
+  
+  // Relationships
+  faculties      Faculty[]
+  students       Student[]
+  subjects       Subject[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([organizationId, code])
+  @@map("departments")
+}
+
+enum NepCategory {
+  CORE           // Core subjects (60%)
+  ELECTIVE       // Elective subjects (30%)
+  SKILL_BASED    // Skill-based subjects (10%)
+  FOUNDATION     // Foundation courses
+  INTERDISCIPLINARY // Interdisciplinary courses
+  PROJECT        // Project work
+  INTERNSHIP     // Internship
+  RESEARCH       // Research work
+}
+
+// ================================
+// PEOPLE
+// ================================
+
+model Faculty {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  departmentId   String
+  department     Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  
+  // Basic Information
+  employeeId     String   @unique
+  firstName      String
+  lastName       String
+  email          String   @unique
+  phone          String?
+  designation    String   // Professor, Associate Professor, Assistant Professor, etc.
+  qualification  String?
+  
+  // NEP 2020 Specific
+  specializations String[] // Areas of expertise
+  nepCategories   NepCategory[] // Categories they can teach
+  
+  // Workload Management
+  maxHoursPerWeek    Int @default(40)
+  currentWorkload    Int @default(0) // Current assigned hours
+  isAvailable        Boolean @default(true)
+  
+  // Availability
+  availability   FacultyAvailability[]
+  
+  // Relationships
+  timetables     TimetableFaculty[]
+  subjects       SubjectFaculty[]
+  hodDepartment  Department? @relation("DepartmentHOD")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("faculties")
+}
+
+model FacultyAvailability {
+  id         String   @id @default(cuid())
+  facultyId  String
+  faculty    Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  
+  dayOfWeek  Int      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime  String   // "09:00"
+  endTime    String   // "17:00"
+  isAvailable Boolean @default(true)
+  reason     String?  // "Office Hours", "Research Time", etc.
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("faculty_availability")
+}
+
+model Student {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  departmentId   String
+  department     Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  
+  // Basic Information
+  rollNumber     String   @unique
+  firstName      String
+  lastName       String
+  email          String   @unique
+  phone          String?
+  dateOfBirth    DateTime?
+  
+  // Academic Information
+  currentYear    Int      // 1, 2, 3, 4
+  currentSemester Int     // 1, 2, 3, 4, 5, 6, 7, 8
+  admissionYear  Int
+  isActive       Boolean  @default(true)
+  
+  // NEP 2020 Credit Tracking
+  totalCreditsEarned    Int @default(0)
+  coreCreditsEarned     Int @default(0)
+  electiveCreditsEarned Int @default(0)
+  skillCreditsEarned    Int @default(0)
+  
+  // Relationships
+  enrollments    Enrollment[]
+  timetables     TimetableStudent[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("students")
+}
+
+// ================================
+// ACADEMIC CONTENT
+// ================================
+
+model Subject {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  departmentId   String
+  department     Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  
+  // Basic Information
+  code           String   // e.g., "CS101", "MAT201"
+  name           String
+  description    String?
+  
+  // NEP 2020 Classification
+  nepCategory    NepCategory
+  credits        Int      // Credit hours
+  lectureHours   Int      // L-T-P format
+  tutorialHours  Int
+  practicalHours Int
+  
+  // Prerequisites
+  prerequisites  SubjectPrerequisite[]
+  isPrerequisiteFor SubjectPrerequisite[] @relation("SubjectPrerequisite")
+  
+  // Assessment
+  continuousAssessmentWeight Int @default(40)
+  endSemesterExamWeight      Int @default(60)
+  
+  // Availability
+  isOffered      Boolean  @default(true)
+  offeredInYears Int[]    // [1, 2, 3, 4] - which years can take this subject
+  
+  // Relationships
+  faculties      SubjectFaculty[]
+  enrollments    Enrollment[]
+  timetables     TimetableSubject[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([organizationId, code])
+  @@map("subjects")
+}
+
+model SubjectPrerequisite {
+  id              String   @id @default(cuid())
+  subjectId       String
+  subject         Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  prerequisiteId  String
+  prerequisite    Subject  @relation("SubjectPrerequisite", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+  
+  isMandatory     Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([subjectId, prerequisiteId])
+  @@map("subject_prerequisites")
+}
+
+model SubjectFaculty {
+  id         String   @id @default(cuid())
+  subjectId  String
+  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  facultyId  String
+  faculty    Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  
+  isPrimary  Boolean  @default(false) // Primary instructor vs co-instructor
+  canTeach   Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([subjectId, facultyId])
+  @@map("subject_faculty")
+}
+
+// ================================
+// INFRASTRUCTURE
+// ================================
+
+model Room {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  name           String   // e.g., "Lecture Hall 1", "Computer Lab A"
+  code           String   // e.g., "LH1", "CLAB-A"
+  type           RoomType
+  capacity       Int
+  floor          Int?
+  building       String?
+  
+  // Equipment and Features
+  equipment      String[] // ["Projector", "Whiteboard", "Computers", "Air Conditioning"]
+  isAccessible   Boolean  @default(false)
+  
+  // Availability
+  availability   RoomAvailability[]
+  
+  // Relationships
+  timetables     TimetableRoom[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([organizationId, code])
+  @@map("rooms")
+}
+
+enum RoomType {
+  LECTURE_HALL
+  TUTORIAL_ROOM
+  LABORATORY
+  SEMINAR_HALL
+  LIBRARY
+  AUDITORIUM
+  CONFERENCE_ROOM
+  COMPUTER_LAB
+  RESEARCH_LAB
+}
+
+model RoomAvailability {
+  id         String   @id @default(cuid())
+  roomId     String
+  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  dayOfWeek  Int      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime  String   // "09:00"
+  endTime    String   // "17:00"
+  isAvailable Boolean @default(true)
+  reason     String?  // "Maintenance", "Reserved", etc.
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("room_availability")
+}
+
+model TimeSlot {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  name           String   // e.g., "Slot 1", "Morning Session"
+  startTime      String   // "09:00"
+  endTime        String   // "10:00"
+  duration       Int      // Duration in minutes
+  dayOfWeek      Int?     // 0 = Sunday, 1 = Monday, ..., 6 = Saturday (null for daily slots)
+  isActive       Boolean  @default(true)
+  
+  // Relationships
+  timetables     TimetableSlot[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("time_slots")
+}
+
+// ================================
+// ENROLLMENT AND SCHEDULING
+// ================================
+
+model Enrollment {
+  id             String   @id @default(cuid())
+  studentId      String
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  semesterId     String
+  semester       Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  
+  // Enrollment Details
+  enrollmentDate DateTime @default(now())
+  isActive       Boolean  @default(true)
+  grade          String?  // A+, A, B+, B, C+, C, D, F
+  
+  // NEP 2020 Credit Tracking
+  creditsEarned  Int      @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([studentId, subjectId, semesterId])
+  @@map("enrollments")
+}
+
+// ================================
+// CONSTRAINTS AND RULES
+// ================================
+
+model Constraint {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  name           String
+  type           ConstraintType
+  description    String?
+  
+  // Constraint Configuration
+  config         Json     // Flexible JSON configuration for different constraint types
+  
+  // Priority and Weight
+  priority       Int      @default(1) // 1 = highest priority
+  weight         Float    @default(1.0) // Weight in optimization
+  
+  isActive       Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("constraints")
+}
+
+enum ConstraintType {
+  // Faculty Constraints
+  FACULTY_MAX_HOURS_PER_DAY
+  FACULTY_MAX_HOURS_PER_WEEK
+  FACULTY_AVAILABILITY
+  FACULTY_NO_BACK_TO_BACK_CLASSES
+  FACULTY_LUNCH_BREAK
+  
+  // Room Constraints
+  ROOM_CAPACITY
+  ROOM_AVAILABILITY
+  ROOM_EQUIPMENT_REQUIREMENTS
+  ROOM_NO_DOUBLE_BOOKING
+  
+  // Student Constraints
+  STUDENT_MAX_HOURS_PER_DAY
+  STUDENT_NO_BACK_TO_BACK_CLASSES
+  STUDENT_LUNCH_BREAK
+  STUDENT_CREDIT_LIMITS
+  
+  // Academic Constraints
+  SUBJECT_PREREQUISITES
+  SUBJECT_CONFLICTS
+  NEP_CREDIT_DISTRIBUTION
+  CONTINUOUS_ASSESSMENT_SCHEDULING
+  
+  // Institutional Constraints
+  DEPARTMENT_PREFERENCES
+  CROSS_DEPARTMENT_ELECTIVES
+  INTERDISCIPLINARY_COURSES
+  PROJECT_WORK_SCHEDULING
+}
+
+// ================================
+// TIMETABLE GENERATION
+// ================================
+
+model Timetable {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  semesterId     String?
+  semester       Semester? @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  
+  // Timetable Information
+  name           String
+  description    String?
+  year           Int?     // Specific year (1, 2, 3, 4)
+  departmentId   String?
+  department     Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  
+  // Status and Metadata
+  status         TimetableStatus @default(DRAFT)
+  version        Int      @default(1)
+  generatedAt    DateTime @default(now())
+  generatedBy    String?  // User ID who generated it
+  
+  // Optimization Results
+  totalConflicts Int      @default(0)
+  constraintViolations Json? // Details of constraint violations
+  optimizationScore Float? // Overall optimization score
+  
+  // Relationships
+  slots          TimetableSlot[]
+  faculties      TimetableFaculty[]
+  students       TimetableStudent[]
+  subjects       TimetableSubject[]
+  rooms          TimetableRoom[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("timetables")
+}
+
+enum TimetableStatus {
+  DRAFT
+  GENERATED
+  PUBLISHED
+  ARCHIVED
+}
+
+model TimetableSlot {
+  id           String   @id @default(cuid())
+  timetableId  String
+  timetable    Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  timeSlotId   String
+  timeSlot     TimeSlot @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+  
+  dayOfWeek    Int      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime    String   // "09:00"
+  endTime      String   // "10:00"
+  
+  // Class Information
+  subjectId    String
+  subject      Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  facultyId    String
+  faculty      Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  roomId       String
+  room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  // Class Details
+  classType    ClassType @default(LECTURE)
+  isOnline     Boolean  @default(false)
+  maxStudents  Int?
+  
+  // Conflict Tracking
+  hasConflicts Boolean  @default(false)
+  conflictDetails Json? // Details of any conflicts
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("timetable_slots")
+}
+
+enum ClassType {
+  LECTURE
+  TUTORIAL
+  PRACTICAL
+  LABORATORY
+  SEMINAR
+  PROJECT
+  INTERNSHIP
+  RESEARCH
+}
+
+// Junction Tables for Many-to-Many Relationships
+
+model TimetableFaculty {
+  id           String   @id @default(cuid())
+  timetableId  String
+  timetable    Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  facultyId    String
+  faculty      Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  
+  totalHours   Int      @default(0)
+  isAssigned   Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([timetableId, facultyId])
+  @@map("timetable_faculty")
+}
+
+model TimetableStudent {
+  id           String   @id @default(cuid())
+  timetableId  String
+  timetable    Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  totalCredits Int      @default(0)
+  isEnrolled   Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([timetableId, studentId])
+  @@map("timetable_student")
+}
+
+model TimetableSubject {
+  id           String   @id @default(cuid())
+  timetableId  String
+  timetable    Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  subjectId    String
+  subject      Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  totalSlots   Int      @default(0)
+  isScheduled  Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([timetableId, subjectId])
+  @@map("timetable_subject")
+}
+
+model TimetableRoom {
+  id           String   @id @default(cuid())
+  timetableId  String
+  timetable    Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  roomId       String
+  room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  totalSlots   Int      @default(0)
+  isUtilized   Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([timetableId, roomId])
+  @@map("timetable_room")
+}
+
+// ================================
+// AUDIT AND LOGGING
+// ================================
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Action Details
+  action         String   // "CREATE", "UPDATE", "DELETE", "GENERATE_TIMETABLE"
+  entityType     String   // "Timetable", "Faculty", "Student", etc.
+  entityId       String?
+  
+  // User Information
+  userId         String?
+  userEmail      String?
+  
+  // Change Details
+  oldValues      Json?
+  newValues      Json?
+  changes        Json?
+  
+  // Metadata
+  ipAddress      String?
+  userAgent      String?
+  timestamp      DateTime @default(now())
+  
+  @@map("audit_logs")
+}
+
+// ================================
+// NOTIFICATIONS
+// ================================
+
+model Notification {
+  id             String   @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Recipient
+  userId         String?  // Faculty or Student ID
+  userType       UserType
+  
+  // Notification Details
+  title          String
+  message        String
+  type           NotificationType
+  priority       Priority @default(MEDIUM)
+  
+  // Status
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  
+  // Action
+  actionUrl      String?
+  actionText     String?
+  
+  createdAt DateTime @default(now())
+  expiresAt DateTime?
+  
+  @@map("notifications")
+}
+
+enum UserType {
+  FACULTY
+  STUDENT
+  ADMIN
+}
+
+enum NotificationType {
+  TIMETABLE_GENERATED
+  TIMETABLE_PUBLISHED
+  SCHEDULE_CHANGE
+  ROOM_CHANGE
+  FACULTY_CHANGE
+  CONFLICT_DETECTED
+  DEADLINE_REMINDER
+  SYSTEM_ALERT
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+

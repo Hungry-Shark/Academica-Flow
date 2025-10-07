@@ -9,7 +9,10 @@ import { UserProfile, ChatMessage, TimetableData } from '../types';
 // FIX: Import the Icon component to resolve the 'Cannot find name' error.
 import { Icon } from './Icons';
 import { getFirebaseAuth } from '../firebase';
-import { getOrgTimetable, raiseTimetableQuery, getOrganizationByToken, publishTimetable } from '../firebase';
+import { getOrgTimetable, raiseTimetableQuery, getOrganizationByToken, publishTimetable, getAdminContextForOrg } from '../firebase';
+import { AnalyticsDashboard } from './analytics/AnalyticsDashboard';
+import { RealTimeDashboard } from './analytics/RealTimeDashboard';
+import { AutomatedReportGeneration } from './analytics/AutomatedReportGeneration';
 
 interface DashboardProps {
   user: UserProfile;
@@ -24,6 +27,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
   const [currentView, setCurrentView] = useState<'timetable'>('timetable');
   const [isPublished, setIsPublished] = useState(false);
   const [organizationName, setOrganizationName] = useState<string>('');
+  const [administrativeData, setAdministrativeData] = useState<any>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showRealTime, setShowRealTime] = useState(false);
+  const [showReports, setShowReports] = useState(false);
   const timetableRef = useRef<HTMLDivElement>(null);
 
   // Load organization timetable for all users based on organization token
@@ -51,6 +58,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
       }
     };
     loadOrg();
+  }, [user.organizationToken, user.role]);
+
+  // Load administrative data for analytics
+  useEffect(() => {
+    const loadAdminData = async () => {
+      if (!user.organizationToken || user.role !== 'admin') return;
+      
+      try {
+        const adminData = await getAdminContextForOrg(user.organizationToken);
+        setAdministrativeData(adminData);
+      } catch (error) {
+        console.error('Error loading administrative data:', error);
+      }
+    };
+    loadAdminData();
   }, [user.organizationToken, user.role]);
 
   // Refresh timetable data when component becomes visible (for when returning from GenerateTT)
@@ -221,13 +243,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
                 </h2>
                 <div className="flex space-x-2">
                   {isAdmin && (
-                    <button 
-                      onClick={handleRefreshTimetable} 
-                      className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                    >
-                      <Icon name="refresh" className="w-4 h-4" />
-                      <span>Refresh</span>
-                    </button>
+                    <>
+                      <button 
+                        onClick={handleRefreshTimetable} 
+                        className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                      >
+                        <Icon name="refresh" className="w-4 h-4" />
+                        <span>Refresh</span>
+                      </button>
+                      <button 
+                        onClick={() => setShowAnalytics(true)}
+                        className="flex items-center space-x-2 px-3 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
+                      >
+                        <Icon name="chart" className="w-4 h-4" />
+                        <span>Analytics</span>
+                      </button>
+                      <button 
+                        onClick={() => setShowRealTime(true)}
+                        className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+                      >
+                        <Icon name="activity" className="w-4 h-4" />
+                        <span>Real-time</span>
+                      </button>
+                      <button 
+                        onClick={() => setShowReports(true)}
+                        className="flex items-center space-x-2 px-3 py-2 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 transition"
+                      >
+                        <Icon name="file" className="w-4 h-4" />
+                        <span>Reports</span>
+                      </button>
+                    </>
                   )}
                   {!isAdmin && (
                     <button onClick={handleRaiseQuery} className="flex items-center space-x-2 px-3 py-2 text-sm bg-white border border-black rounded-md text-black hover:bg-black/5 transition">
@@ -263,6 +308,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, isAdmin, o
           </div>
         </div>
       </main>
+
+      {/* Analytics Dashboard Modal */}
+      {showAnalytics && (
+        <AnalyticsDashboard
+          user={user}
+          timetableData={timetableData}
+          administrativeData={administrativeData}
+          onClose={() => setShowAnalytics(false)}
+        />
+      )}
+
+      {/* Real-time Dashboard Modal */}
+      {showRealTime && (
+        <RealTimeDashboard
+          onClose={() => setShowRealTime(false)}
+        />
+      )}
+
+      {/* Automated Report Generation Modal */}
+      {showReports && (
+        <AutomatedReportGeneration
+          onClose={() => setShowReports(false)}
+        />
+      )}
     </div>
   );
 };

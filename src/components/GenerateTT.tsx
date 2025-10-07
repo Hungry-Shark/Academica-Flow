@@ -263,7 +263,7 @@ export const GenerateTT: React.FC<GenerateTTProps> = ({ user, onLogout, onNaviga
         IMPORTANT: Follow the sentiment rules for year-specific scheduling. Use only 1-2 classrooms per timetable. Return ONLY the JSON object, nothing else.`;
 
       const result = await ai.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
+        model: "gemini-2.5-flash",
         generationConfig: {
           responseMimeType: "application/json"
         }

@@ -3,6 +3,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, limit, updateDoc, initializeFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { connectAuthEmulator } from 'firebase/auth';
 import { UserProfile, AdminProfile, AdminSettings, TimetableData, AdministrativeData, Organization } from './types';
+import { logFirebaseConfig, checkEnvironmentVariables, diagnoseFirebaseAuthIssues } from './utils/firebaseConfigChecker';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -14,6 +15,11 @@ const firebaseConfig = {
    appId: import.meta.env.VITE_FIREBASE_APP_ID,
    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
+
+// Debug Firebase configuration
+checkEnvironmentVariables();
+logFirebaseConfig(firebaseConfig);
+diagnoseFirebaseAuthIssues();
 
 // Validate Firebase configuration
 if (!firebaseConfig.apiKey) {

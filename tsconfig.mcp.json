@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist/mcp",
+    "rootDir": "./src/mcp",
+    "baseUrl": "./src/mcp",
+    "paths": {
+      "@/*": ["./*"],
+      "@/types/*": ["../types/*"],
+      "@/utils/*": ["../utils/*"],
+      "@/rag/*": ["../rag/*"],
+      "@/nep/*": ["../nep/*"],
+      "@/retrieval/*": ["../retrieval/*"]
+    }
+  },
+  "include": [
+    "src/mcp/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}
+
