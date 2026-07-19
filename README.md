@@ -22,8 +22,6 @@ Creating academic timetables is a **nightmare** that every educational instituti
 
 This manual process is **error-prone**, **time-consuming**, and often results in conflicts that frustrate both students and faculty.
 
-![The Struggle](https://via.placeholder.com/400x300/ff6b6b/ffffff?text=Administrator+Overwhelmed)
-
 ---
 
 ## ✨ Our AI-Powered Solution
@@ -37,8 +35,6 @@ This manual process is **error-prone**, **time-consuming**, and often results in
 - 📊 **Offers comprehensive** reporting and analytics
 
 Transform a **week-long nightmare** into a matter of **minutes**.
-
-![AI Solution](https://via.placeholder.com/400x300/4ecdc4/ffffff?text=AI+Powered+Solution)
 
 ---
 
@@ -138,10 +134,6 @@ We believe in **simplicity**, **efficiency**, and **user experience**. Every fea
 
 ## 📊 Impact
 
-> *"Academica Flow transformed our scheduling process from a 2-week nightmare into a 30-minute task. Our faculty and students love the new system!"*
-> 
-> — **Dr. Sarah Johnson, Dean of Engineering**
-
 ### Measurable Results
 - 🕐 **95% reduction** in scheduling time
 - 🎯 **100% conflict-free** timetables
@@ -175,14 +167,6 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 📞 Contact
-
-- **Website**: [academicaflow.com](https://academicaflow.com)
-- **Email**: contact@academicaflow.com
-- **Twitter**: [@AcademicaFlow](https://twitter.com/academicaflow)
 
 ---
 
